@@ -1,0 +1,687 @@
+<!DOCTYPE html>
+<html lang="es-AR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Invertí con Claude · Dashboard IOL Argentina</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;700;900&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<style>
+:root{
+  --bg:#0A1120; --panel:#111B2E; --panel2:#0D1626; --line:#1E2C45;
+  --text:#E9EEF7; --muted:#8FA0BC; --up:#33D17A; --down:#F0544F;
+  --gold:#E9B44C; --gold-dim:#8A6B2B; --blue:#5BA8FF;
+  --radius:10px;
+  --f-display:'Archivo',sans-serif; --f-body:'IBM Plex Sans',sans-serif; --f-mono:'IBM Plex Mono',monospace;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html{scroll-behavior:smooth}
+body{background:var(--bg);color:var(--text);font-family:var(--f-body);font-size:15px;line-height:1.5}
+button{font-family:var(--f-body);cursor:pointer}
+input,select{font-family:var(--f-mono);background:var(--panel2);border:1px solid var(--line);color:var(--text);padding:8px 10px;border-radius:6px;font-size:14px;width:100%}
+input:focus,select:focus,button:focus-visible{outline:2px solid var(--gold);outline-offset:1px}
+.mono{font-family:var(--f-mono)}
+.up{color:var(--up)} .down{color:var(--down)} .muted{color:var(--muted)}
+
+/* ---------- Header + cinta de dólares ---------- */
+header{border-bottom:1px solid var(--line);background:linear-gradient(180deg,#0D1626,#0A1120)}
+.brand{display:flex;align-items:baseline;gap:14px;padding:18px 22px 10px;flex-wrap:wrap}
+.brand h1{font-family:var(--f-display);font-weight:900;font-size:1.5rem;letter-spacing:-.02em}
+.brand h1 span{color:var(--gold)}
+.brand .sub{color:var(--muted);font-size:.85rem}
+.tape{display:flex;gap:0;overflow-x:auto;border-top:1px solid var(--line);scrollbar-width:none}
+.tape::-webkit-scrollbar{display:none}
+.tape .quote{flex:0 0 auto;padding:10px 18px;border-right:1px solid var(--line);min-width:130px}
+.tape .quote .lbl{font-size:.7rem;text-transform:uppercase;letter-spacing:.12em;color:var(--muted)}
+.tape .quote .val{font-family:var(--f-mono);font-size:1.05rem;font-weight:600}
+.tape .quote .var{font-family:var(--f-mono);font-size:.75rem}
+
+/* ---------- Nav ---------- */
+nav{display:flex;gap:4px;padding:10px 16px;border-bottom:1px solid var(--line);position:sticky;top:0;background:rgba(10,17,32,.94);backdrop-filter:blur(6px);z-index:50;overflow-x:auto}
+nav button{background:none;border:1px solid transparent;color:var(--muted);padding:8px 16px;border-radius:8px;font-size:.92rem;font-weight:500;white-space:nowrap}
+nav button.active{color:var(--text);border-color:var(--line);background:var(--panel)}
+nav button:hover{color:var(--text)}
+
+main{max-width:1180px;margin:0 auto;padding:22px 16px 60px}
+section.tab{display:none}
+section.tab.active{display:block;animation:fadein .25s ease}
+@keyframes fadein{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:none}}
+@media (prefers-reduced-motion:reduce){section.tab.active{animation:none}}
+
+h2{font-family:var(--f-display);font-weight:700;font-size:1.25rem;margin-bottom:4px}
+.desc{color:var(--muted);font-size:.9rem;margin-bottom:18px}
+
+/* ---------- Cards / grid ---------- */
+.grid{display:grid;gap:14px}
+.grid.kpis{grid-template-columns:repeat(auto-fit,minmax(180px,1fr));margin-bottom:20px}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);padding:16px}
+.card .k-lbl{font-size:.72rem;text-transform:uppercase;letter-spacing:.12em;color:var(--muted)}
+.card .k-val{font-family:var(--f-mono);font-size:1.45rem;font-weight:600;margin-top:4px}
+.card .k-sub{font-family:var(--f-mono);font-size:.8rem;color:var(--muted);margin-top:2px}
+
+/* ---------- Tablas ---------- */
+.tblwrap{overflow-x:auto;background:var(--panel);border:1px solid var(--line);border-radius:var(--radius)}
+table{width:100%;border-collapse:collapse;font-size:.88rem}
+th{font-size:.7rem;text-transform:uppercase;letter-spacing:.1em;color:var(--muted);text-align:left;padding:10px 12px;border-bottom:1px solid var(--line);white-space:nowrap}
+td{padding:9px 12px;border-bottom:1px solid var(--panel2);font-family:var(--f-mono);white-space:nowrap}
+td.name{font-family:var(--f-body);color:var(--muted);max-width:260px;overflow:hidden;text-overflow:ellipsis}
+tr:hover td{background:rgba(233,180,76,.04)}
+.num{text-align:right}
+th.num{text-align:right}
+
+.pill{display:inline-block;font-family:var(--f-mono);font-size:.68rem;padding:2px 8px;border-radius:99px;border:1px solid var(--line);color:var(--muted)}
+.pill.cedear{color:#7FB8FF;border-color:#27436B}
+.pill.accion{color:#7CE0A9;border-color:#1F5B3C}
+.pill.bono{color:var(--gold);border-color:var(--gold-dim)}
+.pill.letra{color:#E4C97F;border-color:#5E5030}
+.pill.fci{color:#C9A6FF;border-color:#4A3670}
+.pill.cripto{color:#FF9E6D;border-color:#6B3A22}
+.pill.mm{color:#9FDCE8;border-color:#2C5A64}
+
+/* ---------- Controles ---------- */
+.controls{display:flex;gap:10px;margin-bottom:14px;flex-wrap:wrap;align-items:center}
+.controls input[type=search]{max-width:280px}
+.controls select{max-width:200px;width:auto}
+.btn{background:var(--panel);border:1px solid var(--line);color:var(--text);padding:9px 16px;border-radius:8px;font-size:.88rem;font-weight:500}
+.btn:hover{border-color:var(--gold-dim)}
+.btn.primary{background:var(--gold);border-color:var(--gold);color:#171207;font-weight:600}
+.btn.primary:hover{filter:brightness(1.08)}
+.btn.danger{color:var(--down);border-color:#5E2624}
+.btn.sm{padding:4px 10px;font-size:.75rem}
+
+/* ---------- Formularios ---------- */
+.formgrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:12px;align-items:end}
+.field label{display:block;font-size:.72rem;text-transform:uppercase;letter-spacing:.1em;color:var(--muted);margin-bottom:5px}
+
+/* ---------- Test de perfil ---------- */
+.q{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);padding:18px;margin-bottom:12px}
+.q h3{font-size:.95rem;font-weight:600;margin-bottom:10px}
+.q h3 .qnum{color:var(--gold);font-family:var(--f-mono);margin-right:8px}
+.q .opts{display:grid;gap:8px}
+.q .opts label{display:flex;gap:10px;align-items:flex-start;padding:9px 12px;border:1px solid var(--line);border-radius:8px;cursor:pointer;font-size:.88rem;transition:border-color .15s}
+.q .opts label:hover{border-color:var(--gold-dim)}
+.q .opts input{width:auto;margin-top:2px}
+.q .opts label.sel{border-color:var(--gold);background:rgba(233,180,76,.06)}
+.perfil-result{border:1px solid var(--gold-dim);background:linear-gradient(160deg,rgba(233,180,76,.08),transparent);border-radius:var(--radius);padding:22px;margin-top:8px}
+.perfil-result h3{font-family:var(--f-display);font-size:1.3rem;color:var(--gold);margin-bottom:6px}
+
+/* ---------- Charts ---------- */
+.charts2{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-top:16px}
+@media(max-width:820px){.charts2{grid-template-columns:1fr}}
+.chartbox{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);padding:16px;min-height:280px}
+.chartbox h4{font-size:.8rem;text-transform:uppercase;letter-spacing:.1em;color:var(--muted);margin-bottom:10px}
+
+/* ---------- Modal ficha ---------- */
+dialog{background:var(--panel);color:var(--text);border:1px solid var(--line);border-radius:12px;padding:24px;max-width:520px;width:92%;margin:auto}
+dialog::backdrop{background:rgba(4,8,16,.7)}
+dialog h3{font-family:var(--f-display);font-size:1.2rem;margin-bottom:2px}
+dialog .close{float:right;background:none;border:none;color:var(--muted);font-size:1.3rem}
+
+.notice{border:1px solid var(--line);border-left:3px solid var(--gold);background:var(--panel2);padding:12px 14px;border-radius:8px;font-size:.85rem;color:var(--muted);margin-bottom:16px}
+footer{border-top:1px solid var(--line);padding:20px 22px;color:var(--muted);font-size:.78rem;max-width:1180px;margin:0 auto}
+.toast{position:fixed;bottom:18px;left:50%;transform:translateX(-50%);background:var(--panel);border:1px solid var(--gold-dim);padding:10px 20px;border-radius:8px;font-size:.85rem;z-index:99;display:none}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="brand">
+    <h1>INVERTÍ <span>CON CLAUDE</span></h1>
+    <div class="sub">Dashboard educativo · Mercado argentino · Pensado para operar en InvertirOnline</div>
+  </div>
+  <div class="tape" id="tape"><div class="quote"><div class="lbl">Cargando dólares…</div><div class="val mono">—</div></div></div>
+</header>
+
+<nav id="nav">
+  <button data-tab="portfolio" class="active">Mi portfolio</button>
+  <button data-tab="explorar">Explorar activos</button>
+  <button data-tab="operar">Operar</button>
+  <button data-tab="planes">Planes recurrentes</button>
+  <button data-tab="perfil">Test de perfil</button>
+  <button data-tab="datos">Datos</button>
+</nav>
+
+<main>
+
+<!-- ================= PORTFOLIO ================= -->
+<section class="tab active" id="tab-portfolio">
+  <h2>Mi portfolio</h2>
+  <p class="desc">Tus posiciones valuadas a último precio, en pesos y en dólar MEP. Todo se guarda en este navegador.</p>
+  <div class="grid kpis" id="kpis"></div>
+  <div class="tblwrap"><table id="tbl-pos">
+    <thead><tr><th>Activo</th><th>Clase</th><th class="num">Cantidad</th><th class="num">PPC</th><th class="num">Último</th><th class="num">Valor ARS</th><th class="num">Valor USD</th><th class="num">P/L ARS</th><th class="num">P/L %</th></tr></thead>
+    <tbody></tbody>
+  </table></div>
+  <div class="charts2">
+    <div class="chartbox"><h4>Composición por clase</h4><canvas id="ch-clases"></canvas></div>
+    <div class="chartbox"><h4>Cartera actual vs. ideal (según tu perfil)</h4><canvas id="ch-ideal"></canvas></div>
+  </div>
+  <div class="chartbox" style="margin-top:14px"><h4>Evolución patrimonial (USD MEP)</h4><canvas id="ch-evo"></canvas></div>
+  <h2 style="margin-top:26px">Historial de operaciones</h2>
+  <div class="tblwrap"><table id="tbl-ops">
+    <thead><tr><th>Fecha</th><th>Tipo</th><th>Activo</th><th class="num">Cantidad</th><th class="num">Precio</th><th class="num">Total ARS</th><th>Origen</th><th></th></tr></thead>
+    <tbody></tbody>
+  </table></div>
+</section>
+
+<!-- ================= EXPLORAR ================= -->
+<section class="tab" id="tab-explorar">
+  <h2>Explorar activos</h2>
+  <p class="desc">Universo curado de instrumentos operables desde IOL: CEDEARs, acciones del panel líder, bonos soberanos, letras, FCI y cripto. Tocá una fila para ver la ficha.</p>
+  <div class="controls">
+    <input type="search" id="buscador" placeholder="Buscar ticker o nombre…">
+    <select id="filtro-clase">
+      <option value="">Todas las clases</option>
+      <option value="cedear">CEDEARs</option>
+      <option value="accion">Acciones locales</option>
+      <option value="bono">Bonos soberanos</option>
+      <option value="letra">Letras</option>
+      <option value="fci">FCI</option>
+      <option value="cripto">Cripto</option>
+      <option value="mm">Money market</option>
+    </select>
+    <button class="btn" id="btn-precios">↻ Actualizar precios</button>
+    <span class="muted mono" id="precios-status" style="font-size:.75rem"></span>
+  </div>
+  <div class="tblwrap"><table id="tbl-activos">
+    <thead><tr><th>Ticker</th><th>Nombre</th><th>Clase</th><th class="num">Último (ARS)</th><th class="num">Var %</th><th class="num">Riesgo</th></tr></thead>
+    <tbody></tbody>
+  </table></div>
+</section>
+
+<!-- ================= OPERAR ================= -->
+<section class="tab" id="tab-operar">
+  <h2>Operar (simulado)</h2>
+  <p class="desc">Registrá compras y ventas como las harías en IOL. Esto no ejecuta órdenes reales: es tu bitácora y simulador de cartera.</p>
+  <div class="card">
+    <div class="formgrid">
+      <div class="field"><label>Operación</label><select id="op-tipo"><option value="compra">Compra</option><option value="venta">Venta</option></select></div>
+      <div class="field"><label>Activo</label><select id="op-activo"></select></div>
+      <div class="field"><label>Cantidad</label><input type="number" id="op-cant" min="0" step="any" placeholder="0"></div>
+      <div class="field"><label>Precio unitario ARS</label><input type="number" id="op-precio" min="0" step="any" placeholder="usa último si vacío"></div>
+      <div class="field"><label>Fecha</label><input type="date" id="op-fecha"></div>
+      <div class="field"><button class="btn primary" id="btn-op" style="width:100%">Registrar operación</button></div>
+    </div>
+    <p class="muted" style="margin-top:10px;font-size:.8rem" id="op-preview"></p>
+  </div>
+</section>
+
+<!-- ================= PLANES ================= -->
+<section class="tab" id="tab-planes">
+  <h2>Planes de inversión recurrente</h2>
+  <p class="desc">Simulá un plan de compra periódica (tipo DCA). Cada vez que abras la app, las cuotas vencidas se registran automáticamente al último precio disponible.</p>
+  <div class="card" style="margin-bottom:16px">
+    <div class="formgrid">
+      <div class="field"><label>Activo</label><select id="pl-activo"></select></div>
+      <div class="field"><label>Monto por cuota (ARS)</label><input type="number" id="pl-monto" min="0" step="any" placeholder="50000"></div>
+      <div class="field"><label>Frecuencia</label><select id="pl-frec"><option value="7">Semanal</option><option value="14">Quincenal</option><option value="30" selected>Mensual</option><option value="90">Trimestral</option></select></div>
+      <div class="field"><label>Inicio</label><input type="date" id="pl-inicio"></div>
+      <div class="field"><button class="btn primary" id="btn-plan" style="width:100%">Crear plan</button></div>
+    </div>
+  </div>
+  <div class="tblwrap"><table id="tbl-planes">
+    <thead><tr><th>Activo</th><th class="num">Monto</th><th>Frecuencia</th><th>Próxima cuota</th><th class="num">Ejecutadas</th><th></th></tr></thead>
+    <tbody></tbody>
+  </table></div>
+</section>
+
+<!-- ================= PERFIL ================= -->
+<section class="tab" id="tab-perfil">
+  <h2>Test de perfil del inversor</h2>
+  <p class="desc">15 preguntas pensadas para el inversor argentino: horizonte, tolerancia, conocimiento y situación. Al final te propone una cartera ideal por clase de activo, que después se compara contra tu cartera real.</p>
+  <div id="quiz"></div>
+  <button class="btn primary" id="btn-quiz" style="margin-top:8px">Calcular mi perfil</button>
+  <div id="perfil-out"></div>
+</section>
+
+<!-- ================= DATOS ================= -->
+<section class="tab" id="tab-datos">
+  <h2>Datos y respaldo</h2>
+  <p class="desc">Todo vive en el localStorage de este navegador. Exportá un respaldo antes de cambiar de máquina o limpiar el navegador.</p>
+  <div class="notice">Fuentes de precios: dolarapi.com (dólares), data912.com (acciones, CEDEARs, bonos y letras BYMA) y CoinGecko (cripto). Si alguna fuente no responde, podés cargar precios a mano tocando el activo en “Explorar”.</div>
+  <div class="controls">
+    <button class="btn" id="btn-export">⬇ Exportar respaldo JSON</button>
+    <label class="btn" style="display:inline-block">⬆ Importar respaldo<input type="file" id="inp-import" accept=".json" style="display:none"></label>
+    <button class="btn danger" id="btn-reset">Borrar todos los datos</button>
+  </div>
+</section>
+
+</main>
+
+<dialog id="ficha"></dialog>
+<div class="toast" id="toast"></div>
+
+<footer>
+  <strong>Aviso:</strong> herramienta educativa y de seguimiento. No ejecuta órdenes reales, no se conecta a tu cuenta de IOL y nada de lo que muestra constituye recomendación de inversión. Precios de fuentes públicas de terceros, pueden tener demora. Construido con Claude.
+</footer>
+
+<script>
+/* ============================================================
+   INVERTÍ CON CLAUDE · versión IOL Argentina
+   Datos: universo curado de activos operables en IOL
+   ============================================================ */
+
+const CLASES = {
+  cedear:{n:'CEDEAR',color:'#7FB8FF'}, accion:{n:'Acción local',color:'#7CE0A9'},
+  bono:{n:'Bono soberano',color:'#E9B44C'}, letra:{n:'Letra',color:'#E4C97F'},
+  fci:{n:'FCI',color:'#C9A6FF'}, cripto:{n:'Cripto',color:'#FF9E6D'}, mm:{n:'Money market',color:'#9FDCE8'}
+};
+
+/* r = riesgo 1-5 · src = fuente de precio data912 (stocks/cedears/bonds/notes) o cg (coingecko id) */
+const ASSETS = [
+  /* --- Acciones panel líder --- */
+  {t:'GGAL',n:'Grupo Financiero Galicia',c:'accion',r:4,src:'stocks',d:'Mayor grupo financiero privado del país. Muy sensible al riesgo país y al ciclo político.'},
+  {t:'YPFD',n:'YPF S.A.',c:'accion',r:4,src:'stocks',d:'Petrolera de bandera. Apalancada al desarrollo de Vaca Muerta.'},
+  {t:'PAMP',n:'Pampa Energía',c:'accion',r:4,src:'stocks',d:'Generación eléctrica, gas y petroquímica. Management con historial sólido.'},
+  {t:'BMA',n:'Banco Macro',c:'accion',r:4,src:'stocks',d:'Banco privado con fuerte presencia en el interior.'},
+  {t:'CEPU',n:'Central Puerto',c:'accion',r:4,src:'stocks',d:'Una de las mayores generadoras eléctricas privadas.'},
+  {t:'TXAR',n:'Ternium Argentina',c:'accion',r:4,src:'stocks',d:'Acero plano. Ciclo industrial y construcción.'},
+  {t:'ALUA',n:'Aluar',c:'accion',r:4,src:'stocks',d:'Único productor de aluminio primario del país. Exportador.'},
+  {t:'TGSU2',n:'Transportadora de Gas del Sur',c:'accion',r:4,src:'stocks',d:'Transporte de gas y procesamiento de líquidos. Vinculada a Vaca Muerta.'},
+  {t:'TGNO4',n:'Transportadora de Gas del Norte',c:'accion',r:4,src:'stocks',d:'Transporte de gas, negocio regulado.'},
+  {t:'COME',n:'Sociedad Comercial del Plata',c:'accion',r:5,src:'stocks',d:'Holding diversificado. Muy volátil, papel de trading.'},
+  {t:'EDN',n:'Edenor',c:'accion',r:5,src:'stocks',d:'Distribuidora eléctrica del AMBA. Alto riesgo regulatorio-tarifario.'},
+  {t:'LOMA',n:'Loma Negra',c:'accion',r:4,src:'stocks',d:'Cemento. Proxy de la obra pública y privada.'},
+  {t:'CRES',n:'Cresud',c:'accion',r:4,src:'stocks',d:'Agro e inmobiliario (controlante de IRSA).'},
+  {t:'IRSA',n:'IRSA',c:'accion',r:4,src:'stocks',d:'Shoppings, oficinas y desarrollos inmobiliarios.'},
+  {t:'SUPV',n:'Grupo Supervielle',c:'accion',r:5,src:'stocks',d:'Banco mediano, beta alta dentro del sector financiero.'},
+  {t:'MIRG',n:'Mirgor',c:'accion',r:4,src:'stocks',d:'Electrónica en Tierra del Fuego y agroexportación.'},
+  {t:'BYMA',n:'Bolsas y Mercados Argentinos',c:'accion',r:3,src:'stocks',d:'El negocio de la propia bolsa: cobra por cada operación del mercado.'},
+  {t:'TRAN',n:'Transener',c:'accion',r:4,src:'stocks',d:'Transporte de energía eléctrica en alta tensión.'},
+  {t:'VALO',n:'Grupo Financiero Valores',c:'accion',r:4,src:'stocks',d:'Banco de Valores, ligado al negocio bursátil y FCI.'},
+  {t:'METR',n:'Metrogas',c:'accion',r:4,src:'stocks',d:'Distribuidora de gas del AMBA.'},
+
+  /* --- CEDEARs --- */
+  {t:'AAPL',n:'Apple',c:'cedear',r:3,src:'cedears',d:'Ratio 20:1. Exposición a dólar CCL + la mayor empresa de consumo tecnológico.'},
+  {t:'MSFT',n:'Microsoft',c:'cedear',r:3,src:'cedears',d:'Ratio 10:1. Software, nube (Azure) e IA.'},
+  {t:'GOOGL',n:'Alphabet (Google)',c:'cedear',r:3,src:'cedears',d:'Ratio 58:1. Publicidad digital, nube e IA.'},
+  {t:'AMZN',n:'Amazon',c:'cedear',r:3,src:'cedears',d:'Ratio 144:1. E-commerce y AWS.'},
+  {t:'NVDA',n:'NVIDIA',c:'cedear',r:4,src:'cedears',d:'Ratio 24:1. Chips para IA. Alta volatilidad.'},
+  {t:'TSLA',n:'Tesla',c:'cedear',r:5,src:'cedears',d:'Ratio 15:1. Autos eléctricos y energía. Muy volátil.'},
+  {t:'META',n:'Meta Platforms',c:'cedear',r:4,src:'cedears',d:'Ratio 24:1. Redes sociales y publicidad.'},
+  {t:'MELI',n:'MercadoLibre',c:'cedear',r:4,src:'cedears',d:'Ratio 60:1. El gigante regional de e-commerce y fintech.'},
+  {t:'KO',n:'Coca-Cola',c:'cedear',r:2,src:'cedears',d:'Ratio 5:1. Consumo defensivo, dividendos estables.'},
+  {t:'JNJ',n:'Johnson & Johnson',c:'cedear',r:2,src:'cedears',d:'Ratio 3:1. Salud, perfil defensivo.'},
+  {t:'PG',n:'Procter & Gamble',c:'cedear',r:2,src:'cedears',d:'Ratio 6:1. Consumo masivo defensivo.'},
+  {t:'WMT',n:'Walmart',c:'cedear',r:2,src:'cedears',d:'Ratio 12:1. Retail defensivo.'},
+  {t:'XOM',n:'Exxon Mobil',c:'cedear',r:3,src:'cedears',d:'Ratio 5:1. Energía tradicional, dividendos.'},
+  {t:'BRKB',n:'Berkshire Hathaway B',c:'cedear',r:2,src:'cedears',d:'Ratio 18:1. El holding de Buffett: diversificación en un papel.'},
+  {t:'JPM',n:'JP Morgan',c:'cedear',r:3,src:'cedears',d:'Ratio 10:1. El mayor banco de EE.UU.'},
+  {t:'V',n:'Visa',c:'cedear',r:3,src:'cedears',d:'Ratio 12:1. Medios de pago globales.'},
+  {t:'DIS',n:'Disney',c:'cedear',r:3,src:'cedears',d:'Ratio 8:1. Entretenimiento y streaming.'},
+  {t:'NFLX',n:'Netflix',c:'cedear',r:4,src:'cedears',d:'Ratio 32:1. Streaming.'},
+  {t:'AMD',n:'AMD',c:'cedear',r:4,src:'cedears',d:'Ratio 10:1. Semiconductores.'},
+  {t:'PBR',n:'Petrobras',c:'cedear',r:4,src:'cedears',d:'Ratio 2:1. Petrolera brasileña, dividendos altos y riesgo político.'},
+  {t:'VIST',n:'Vista Energy',c:'cedear',r:4,src:'cedears',d:'Ratio 3:1. Shale oil en Vaca Muerta, listada afuera.'},
+  {t:'GOLD',n:'Barrick Gold',c:'cedear',r:3,src:'cedears',d:'Ratio 2:1. Minería de oro: cobertura clásica.'},
+  {t:'SPY',n:'ETF S&P 500 (SPY)',c:'cedear',r:3,src:'cedears',d:'Ratio 20:1. El índice completo en un CEDEAR. Base de cualquier cartera pasiva.'},
+  {t:'QQQ',n:'ETF Nasdaq 100 (QQQ)',c:'cedear',r:4,src:'cedears',d:'Ratio 20:1. Tecnología americana concentrada.'},
+  {t:'DIA',n:'ETF Dow Jones (DIA)',c:'cedear',r:3,src:'cedears',d:'Ratio 20:1. Industriales americanas.'},
+  {t:'EEM',n:'ETF Mercados Emergentes (EEM)',c:'cedear',r:4,src:'cedears',d:'Ratio 10:1. Canasta de emergentes.'},
+  {t:'XLE',n:'ETF Energía (XLE)',c:'cedear',r:4,src:'cedears',d:'Ratio 10:1. Sector energético americano.'},
+  {t:'ARKK',n:'ETF ARK Innovation',c:'cedear',r:5,src:'cedears',d:'Ratio 10:1. Innovación disruptiva, volatilidad extrema.'},
+
+  /* --- Bonos soberanos USD --- */
+  {t:'AL30',n:'Bonar 2030 (ley local)',c:'bono',r:3,src:'bonds',d:'El bono más operado del mercado. Instrumento clásico para dólar MEP.'},
+  {t:'GD30',n:'Global 2030 (ley NY)',c:'bono',r:3,src:'bonds',d:'Hermano del AL30 con legislación extranjera. Se usa para CCL.'},
+  {t:'AL35',n:'Bonar 2035',c:'bono',r:3,src:'bonds',d:'Duration más larga: más sensible al riesgo país.'},
+  {t:'GD35',n:'Global 2035',c:'bono',r:3,src:'bonds',d:'Ley NY, duration larga. Apuesta a compresión de riesgo país.'},
+  {t:'AE38',n:'Bonar 2038',c:'bono',r:3,src:'bonds',d:'Estructura de cupones creciente (step-up).'},
+  {t:'GD38',n:'Global 2038',c:'bono',r:3,src:'bonds',d:'Ley NY, cupón alto relativo.'},
+  {t:'AL41',n:'Bonar 2041',c:'bono',r:3,src:'bonds',d:'El más largo de ley local.'},
+  {t:'GD41',n:'Global 2041',c:'bono',r:3,src:'bonds',d:'Ley NY, muy largo plazo.'},
+  {t:'GD46',n:'Global 2046',c:'bono',r:3,src:'bonds',d:'El de mayor duration de la curva.'},
+
+  /* --- Letras / renta fija ARS corta --- */
+  {t:'S31G6',n:'Lecap agosto 2026',c:'letra',r:2,src:'notes',d:'Letra capitalizable en pesos a tasa fija. Alternativa al plazo fijo con liquidez diaria.'},
+  {t:'S30O6',n:'Lecap octubre 2026',c:'letra',r:2,src:'notes',d:'Tramo medio de la curva de tasa fija en pesos.'},
+  {t:'T15E7',n:'Boncap enero 2027',c:'letra',r:2,src:'notes',d:'Tasa fija en pesos a mayor plazo: apuesta a desinflación.'},
+  {t:'TX28',n:'Boncer 2028 (CER)',c:'letra',r:2,src:'bonds',d:'Ajusta por inflación (CER). Cobertura del poder adquisitivo en pesos.'},
+
+  /* --- FCI genéricos (precio manual: cuotaparte de tu FCI en IOL) --- */
+  {t:'FCI-MM',n:'FCI Money Market (t+0)',c:'mm',r:1,src:null,d:'Liquidez inmediata remunerada. En IOL: AdCap Ahorro Pesos o similar. Cargá el valor de cuotaparte a mano.'},
+  {t:'FCI-RF',n:'FCI Renta Fija ARS',c:'fci',r:2,src:null,d:'Cartera de letras y bonos en pesos administrada. Precio de cuotaparte manual.'},
+  {t:'FCI-RV',n:'FCI Renta Variable',c:'fci',r:4,src:null,d:'Cartera de acciones argentinas administrada. Precio de cuotaparte manual.'},
+
+  /* --- Cripto (referencia en USD convertida a ARS por MEP) --- */
+  {t:'BTC',n:'Bitcoin',c:'cripto',r:5,src:'cg:bitcoin',d:'Precio en USD convertido a ARS al MEP. En IOL no se opera directo: podés replicar vía CEDEARs de ETF o exchanges.'},
+  {t:'ETH',n:'Ethereum',c:'cripto',r:5,src:'cg:ethereum',d:'Ídem BTC: referencia valuada al MEP.'},
+];
+
+/* ============================ ESTADO ============================ */
+const KEY='iol_dashboard_v1';
+let S = load();
+function load(){
+  const def={ops:[],planes:[],prices:{},vars:{},dolares:{},perfil:null,snapshots:[]};
+  try{ const s=JSON.parse(localStorage.getItem(KEY)); if(s) return Object.assign(def,s); }catch(e){}
+  return def;
+}
+function save(){ localStorage.setItem(KEY,JSON.stringify(S)); }
+const $=q=>document.querySelector(q);
+const fmt=(n,d=2)=>n==null||isNaN(n)?'—':n.toLocaleString('es-AR',{minimumFractionDigits:d,maximumFractionDigits:d});
+const hoy=()=>new Date().toISOString().slice(0,10);
+function toast(m){const t=$('#toast');t.textContent=m;t.style.display='block';setTimeout(()=>t.style.display='none',3000);}
+const A=t=>ASSETS.find(a=>a.t===t);
+const px=t=>S.prices[t]??null;
+const mep=()=>S.dolares.MEP??null;
+
+/* ============================ DÓLARES ============================ */
+async function fetchDolares(){
+  try{
+    const r=await fetch('https://dolarapi.com/v1/dolares'); const j=await r.json();
+    const map={oficial:'Oficial',blue:'Blue',bolsa:'MEP',contadoconliqui:'CCL',cripto:'Cripto',tarjeta:'Tarjeta'};
+    S.dolares={};
+    j.forEach(d=>{ if(map[d.casa]) S.dolares[map[d.casa]]=d.venta; });
+    save(); renderTape();
+  }catch(e){ renderTape('Sin conexión a dolarapi'); }
+}
+function renderTape(err){
+  const t=$('#tape');
+  if(err){ t.innerHTML=`<div class="quote"><div class="lbl">${err}</div><div class="val mono">—</div></div>`; return; }
+  t.innerHTML=Object.entries(S.dolares).map(([k,v])=>
+    `<div class="quote"><div class="lbl">Dólar ${k}</div><div class="val">$ ${fmt(v,0)}</div></div>`).join('');
+}
+
+/* ============================ PRECIOS ============================ */
+async function fetchPrecios(){
+  const st=$('#precios-status'); st.textContent='Actualizando…';
+  let ok=0,fail=[];
+  const endpoints={stocks:'arg_stocks',cedears:'arg_cedears',bonds:'arg_bonds',notes:'arg_notes'};
+  for(const [k,ep] of Object.entries(endpoints)){
+    try{
+      const r=await fetch('https://data912.com/live/'+ep); const j=await r.json();
+      const idx={}; j.forEach(x=>idx[x.symbol]=x);
+      ASSETS.filter(a=>a.src===k).forEach(a=>{
+        const q=idx[a.t];
+        if(q&&q.c>0){ S.prices[a.t]=q.c; S.vars[a.t]=q.pct_change??null; ok++; }
+      });
+    }catch(e){ fail.push(k); }
+  }
+  /* cripto vía CoinGecko, convertida a ARS por MEP */
+  try{
+    const ids=ASSETS.filter(a=>a.src&&a.src.startsWith('cg:')).map(a=>a.src.slice(3)).join(',');
+    const r=await fetch(`https://api.coingecko.com/api/v3/simple/price?ids=${ids}&vs_currencies=usd&include_24hr_change=true`);
+    const j=await r.json();
+    ASSETS.filter(a=>a.src&&a.src.startsWith('cg:')).forEach(a=>{
+      const d=j[a.src.slice(3)];
+      if(d&&mep()){ S.prices[a.t]=d.usd*mep(); S.vars[a.t]=d.usd_24h_change; ok++; }
+    });
+  }catch(e){ fail.push('cripto'); }
+  S.lastUpdate=new Date().toISOString(); save();
+  st.textContent=`${ok} precios · ${new Date().toLocaleTimeString('es-AR')}${fail.length?' · sin: '+fail.join(', '):''}`;
+  snapshot(); renderAll();
+}
+
+/* ============================ EXPLORAR ============================ */
+function renderExplorar(){
+  const q=($('#buscador').value||'').toLowerCase(), fc=$('#filtro-clase').value;
+  const tb=$('#tbl-activos tbody');
+  tb.innerHTML=ASSETS.filter(a=>(!fc||a.c===fc)&&(!q||a.t.toLowerCase().includes(q)||a.n.toLowerCase().includes(q)))
+    .map(a=>{
+      const v=S.vars[a.t];
+      return `<tr data-t="${a.t}" style="cursor:pointer">
+        <td><strong>${a.t}</strong></td><td class="name">${a.n}</td>
+        <td><span class="pill ${a.c}">${CLASES[a.c].n}</span></td>
+        <td class="num">${px(a.t)?'$ '+fmt(px(a.t)):'<span class="muted">cargar</span>'}</td>
+        <td class="num ${v>0?'up':v<0?'down':''}">${v!=null?fmt(v)+'%':'—'}</td>
+        <td class="num">${'●'.repeat(a.r)}${'○'.repeat(5-a.r)}</td></tr>`;
+    }).join('');
+  tb.querySelectorAll('tr').forEach(tr=>tr.onclick=()=>ficha(tr.dataset.t));
+}
+function ficha(t){
+  const a=A(t), d=$('#ficha');
+  d.innerHTML=`<button class="close" onclick="this.closest('dialog').close()">×</button>
+    <span class="pill ${a.c}">${CLASES[a.c].n}</span>
+    <h3 style="margin-top:8px">${a.t} · ${a.n}</h3>
+    <p class="muted" style="margin:10px 0 14px;font-size:.9rem">${a.d}</p>
+    <div class="formgrid">
+      <div class="field"><label>Último precio ARS</label><input type="number" id="f-precio" step="any" value="${px(t)??''}"></div>
+      <div class="field"><button class="btn primary" style="width:100%" id="f-save">Guardar precio</button></div>
+    </div>
+    <p class="muted mono" style="margin-top:10px;font-size:.75rem">Riesgo ${a.r}/5 · Valor MEP: ${px(t)&&mep()?'US$ '+fmt(px(t)/mep()):'—'}</p>`;
+  d.showModal();
+  $('#f-save').onclick=()=>{ const v=parseFloat($('#f-precio').value); if(v>0){S.prices[t]=v;save();renderAll();d.close();toast('Precio de '+t+' actualizado');} };
+}
+
+/* ============================ OPERACIONES ============================ */
+function selectActivos(){
+  const opts=ASSETS.map(a=>`<option value="${a.t}">${a.t} · ${a.n}</option>`).join('');
+  $('#op-activo').innerHTML=opts; $('#pl-activo').innerHTML=opts;
+}
+function registrarOp(tipo,t,cant,precio,fecha,origen){
+  if(!cant||cant<=0||!precio||precio<=0){toast('Cantidad y precio deben ser mayores a cero');return false;}
+  if(tipo==='venta'){
+    const pos=posiciones()[t];
+    if(!pos||pos.cant<cant){toast('No tenés esa cantidad de '+t+' para vender');return false;}
+  }
+  S.ops.push({id:Date.now()+Math.random(),tipo,t,cant,precio,fecha:fecha||hoy(),origen:origen||'manual'});
+  save(); snapshot(); renderAll(); return true;
+}
+function posiciones(){
+  const p={};
+  [...S.ops].sort((a,b)=>a.fecha.localeCompare(b.fecha)).forEach(o=>{
+    p[o.t]=p[o.t]||{cant:0,costo:0};
+    if(o.tipo==='compra'){ p[o.t].costo+=o.cant*o.precio; p[o.t].cant+=o.cant; }
+    else{ const ppc=p[o.t].cant>0?p[o.t].costo/p[o.t].cant:0; p[o.t].costo-=o.cant*ppc; p[o.t].cant-=o.cant; }
+  });
+  Object.keys(p).forEach(t=>{ if(p[t].cant<=1e-9) delete p[t]; });
+  return p;
+}
+
+/* ============================ PLANES ============================ */
+function ejecutarPlanes(){
+  let n=0;
+  S.planes.forEach(pl=>{
+    let next=new Date(pl.proxima);
+    const now=new Date(hoy());
+    while(next<=now){
+      const precio=px(pl.t);
+      if(precio){
+        const cant=pl.monto/precio;
+        S.ops.push({id:Date.now()+Math.random(),tipo:'compra',t:pl.t,cant,precio,fecha:next.toISOString().slice(0,10),origen:'plan'});
+        pl.ejecutadas=(pl.ejecutadas||0)+1; n++;
+      }
+      next.setDate(next.getDate()+parseInt(pl.frec));
+      pl.proxima=next.toISOString().slice(0,10);
+    }
+  });
+  if(n){ save(); toast(n+' cuota(s) de planes ejecutadas al último precio'); }
+}
+function renderPlanes(){
+  $('#tbl-planes tbody').innerHTML=S.planes.map((pl,i)=>
+    `<tr><td><strong>${pl.t}</strong></td><td class="num">$ ${fmt(pl.monto,0)}</td>
+     <td>${{7:'Semanal',14:'Quincenal',30:'Mensual',90:'Trimestral'}[pl.frec]}</td>
+     <td>${pl.proxima}</td><td class="num">${pl.ejecutadas||0}</td>
+     <td><button class="btn sm danger" onclick="borrarPlan(${i})">Eliminar</button></td></tr>`).join('')
+   ||'<tr><td colspan="6" class="muted" style="font-family:var(--f-body)">Sin planes activos. Creá el primero arriba.</td></tr>';
+}
+function borrarPlan(i){ S.planes.splice(i,1); save(); renderPlanes(); }
+
+/* ============================ SNAPSHOTS ============================ */
+function snapshot(){
+  if(!mep())return;
+  const tot=totales(); if(tot.ars<=0)return;
+  const d=hoy(); S.snapshots=S.snapshots.filter(s=>s.d!==d);
+  S.snapshots.push({d,usd:tot.ars/mep()}); S.snapshots.sort((a,b)=>a.d.localeCompare(b.d));
+  if(S.snapshots.length>365)S.snapshots=S.snapshots.slice(-365);
+  save();
+}
+function totales(){
+  const pos=posiciones(); let ars=0,costo=0;
+  Object.entries(pos).forEach(([t,p])=>{ const pr=px(t); if(pr){ars+=p.cant*pr;} costo+=p.costo; });
+  return {ars,costo,pl:ars-costo};
+}
+
+/* ============================ PORTFOLIO RENDER ============================ */
+let charts={};
+function chart(id,cfg){ if(charts[id])charts[id].destroy(); charts[id]=new Chart($(id),cfg); }
+
+function renderPortfolio(){
+  const pos=posiciones(), tot=totales(), m=mep();
+  $('#kpis').innerHTML=`
+    <div class="card"><div class="k-lbl">Valor total</div><div class="k-val">$ ${fmt(tot.ars,0)}</div><div class="k-sub">${m?'US$ '+fmt(tot.ars/m,0)+' MEP':''}</div></div>
+    <div class="card"><div class="k-lbl">Invertido (costo)</div><div class="k-val">$ ${fmt(tot.costo,0)}</div></div>
+    <div class="card"><div class="k-lbl">Resultado</div><div class="k-val ${tot.pl>=0?'up':'down'}">$ ${fmt(tot.pl,0)}</div><div class="k-sub ${tot.pl>=0?'up':'down'}">${tot.costo>0?fmt(tot.pl/tot.costo*100)+'%':''}</div></div>
+    <div class="card"><div class="k-lbl">Posiciones</div><div class="k-val">${Object.keys(pos).length}</div><div class="k-sub">${S.ops.length} operaciones</div></div>`;
+
+  $('#tbl-pos tbody').innerHTML=Object.entries(pos).map(([t,p])=>{
+    const a=A(t),pr=px(t),ppc=p.costo/p.cant,val=pr?p.cant*pr:null,pl=val!=null?val-p.costo:null;
+    return `<tr><td><strong>${t}</strong></td><td><span class="pill ${a.c}">${CLASES[a.c].n}</span></td>
+      <td class="num">${fmt(p.cant,4)}</td><td class="num">$ ${fmt(ppc)}</td>
+      <td class="num">${pr?'$ '+fmt(pr):'—'}</td><td class="num">${val!=null?'$ '+fmt(val,0):'—'}</td>
+      <td class="num">${val!=null&&m?'US$ '+fmt(val/m):'—'}</td>
+      <td class="num ${pl>=0?'up':'down'}">${pl!=null?'$ '+fmt(pl,0):'—'}</td>
+      <td class="num ${pl>=0?'up':'down'}">${pl!=null&&p.costo>0?fmt(pl/p.costo*100)+'%':'—'}</td></tr>`;
+  }).join('')||'<tr><td colspan="9" class="muted" style="font-family:var(--f-body)">Todavía no registraste operaciones. Arrancá en la pestaña Operar.</td></tr>';
+
+  $('#tbl-ops tbody').innerHTML=[...S.ops].sort((a,b)=>b.fecha.localeCompare(a.fecha)).map(o=>
+    `<tr><td>${o.fecha}</td><td class="${o.tipo==='compra'?'up':'down'}">${o.tipo.toUpperCase()}</td>
+     <td><strong>${o.t}</strong></td><td class="num">${fmt(o.cant,4)}</td><td class="num">$ ${fmt(o.precio)}</td>
+     <td class="num">$ ${fmt(o.cant*o.precio,0)}</td><td class="muted">${o.origen}</td>
+     <td><button class="btn sm danger" onclick="borrarOp('${o.id}')">×</button></td></tr>`).join('')
+   ||'<tr><td colspan="8" class="muted" style="font-family:var(--f-body)">Sin operaciones.</td></tr>';
+
+  /* composición por clase */
+  const porClase={};
+  Object.entries(pos).forEach(([t,p])=>{ const pr=px(t); if(pr){const c=A(t).c; porClase[c]=(porClase[c]||0)+p.cant*pr;} });
+  const cls=Object.keys(porClase);
+  chart('#ch-clases',{type:'doughnut',data:{labels:cls.map(c=>CLASES[c].n),
+    datasets:[{data:cls.map(c=>porClase[c]),backgroundColor:cls.map(c=>CLASES[c].color),borderColor:'#0A1120',borderWidth:2}]},
+    options:{plugins:{legend:{position:'bottom',labels:{color:'#8FA0BC',font:{family:'IBM Plex Mono',size:11}}}}}});
+
+  /* actual vs ideal */
+  const ideal=S.perfil?CARTERAS[S.perfil.nivel]:null;
+  const grupos=['mm','letra','bono','cedear','accion','cripto'];
+  const totV=Object.values(porClase).reduce((a,b)=>a+b,0);
+  const actualPct=grupos.map(g=>totV>0?((porClase[g]||0)+(g==='letra'?(porClase['fci']||0):0))/totV*100:0);
+  chart('#ch-ideal',{type:'bar',data:{labels:['Liquidez','RF Pesos','Bonos USD','CEDEARs','Acciones','Cripto'],
+    datasets:[{label:'Actual %',data:actualPct,backgroundColor:'#5BA8FF'},
+      ...(ideal?[{label:'Ideal %',data:grupos.map(g=>ideal[g]),backgroundColor:'#E9B44C'}]:[])]},
+    options:{scales:{x:{ticks:{color:'#8FA0BC',font:{size:10}},grid:{color:'#1E2C45'}},y:{ticks:{color:'#8FA0BC'},grid:{color:'#1E2C45'}}},
+      plugins:{legend:{labels:{color:'#8FA0BC',font:{family:'IBM Plex Mono',size:11}}}}}});
+
+  /* evolución */
+  chart('#ch-evo',{type:'line',data:{labels:S.snapshots.map(s=>s.d),
+    datasets:[{label:'Patrimonio US$ MEP',data:S.snapshots.map(s=>s.usd),borderColor:'#E9B44C',backgroundColor:'rgba(233,180,76,.12)',fill:true,tension:.3,pointRadius:2}]},
+    options:{scales:{x:{ticks:{color:'#8FA0BC',font:{size:10}},grid:{color:'#1E2C45'}},y:{ticks:{color:'#8FA0BC'},grid:{color:'#1E2C45'}}},
+      plugins:{legend:{labels:{color:'#8FA0BC',font:{family:'IBM Plex Mono',size:11}}}}}});
+}
+function borrarOp(id){ S.ops=S.ops.filter(o=>String(o.id)!==String(id)); save(); renderAll(); }
+
+/* ============================ TEST DE PERFIL ============================ */
+const QUIZ=[
+ {q:'¿Cuál es tu principal objetivo al invertir?',o:[['Proteger mis ahorros de la inflación',0],['Mantener el valor en dólares',1],['Hacer crecer mi capital a mediano plazo',2],['Maximizar el rendimiento aunque implique riesgo alto',3]]},
+ {q:'¿En cuánto tiempo pensás necesitar este dinero?',o:[['Menos de 1 año',0],['Entre 1 y 3 años',1],['Entre 3 y 7 años',2],['Más de 7 años (ej.: construir, jubilación)',3]]},
+ {q:'Si tu cartera cae 25% en un mes por una corrida, ¿qué hacés?',o:[['Vendo todo, no lo tolero',0],['Vendo una parte para dormir tranquilo',1],['No hago nada, espero',2],['Compro más aprovechando precios',3]]},
+ {q:'¿Qué porcentaje de tus ingresos mensuales podés invertir sin tocar?',o:[['Menos del 5%',0],['Entre 5% y 15%',1],['Entre 15% y 30%',2],['Más del 30%',3]]},
+ {q:'¿Tenés un fondo de emergencia (3-6 meses de gastos) aparte de lo que invertís?',o:[['No',0],['Menos de 3 meses',1],['Sí, 3 a 6 meses',2],['Sí, más de 6 meses',3]]},
+ {q:'¿Qué instrumentos operaste alguna vez?',o:[['Solo plazo fijo / caja de ahorro',0],['FCI o dólar MEP',1],['Bonos, CEDEARs o acciones',2],['Opciones, futuros, cauciones o cripto',3]]},
+ {q:'¿Cómo describirías tu conocimiento del mercado argentino?',o:[['Nulo: recién empiezo',0],['Básico: entiendo plazo fijo y dólar',1],['Intermedio: sigo bonos, MEP y CEDEARs',2],['Avanzado: analizo curvas, riesgo país y balances',3]]},
+ {q:'Ante una nueva regulación cambiaria (cepo, parking), tu reacción es:',o:[['Pánico: quiero todo líquido y en mano',0],['Prefiero instrumentos simples y regulados',1],['Reacomodo la cartera con calma',2],['Busco el arbitraje que la nueva regla genera',3]]},
+ {q:'¿Qué parte de tu patrimonio total representa lo que vas a invertir acá?',o:[['Casi todo',0],['Más de la mitad',1],['Entre 20% y 50%',2],['Menos del 20%',3]]},
+ {q:'¿Cuál de estas frases te representa mejor?',o:[['Prefiero ganar poco pero seguro',0],['Acepto algo de riesgo si el premio lo justifica',1],['Busco rendimiento real positivo consistente',2],['Sin volatilidad no hay retorno: la banco',3]]},
+ {q:'¿Tu horizonte incluye un gasto grande programado (construcción, viaje, auto)?',o:[['Sí, dentro de un año',0],['Sí, en 1-3 años',1],['Sí, pero a más de 3 años',2],['No tengo gastos grandes programados',3]]},
+ {q:'¿Cómo preferís estar posicionado frente al dólar?',o:[['100% dolarizado siempre',1],['Mayormente dólar, algo de tasa en pesos',2],['Balanceado según el momento',3],['No me importa la moneda, miro el activo',3]]},
+ {q:'¿Con qué frecuencia revisás tus inversiones?',o:[['Casi nunca',0],['Una vez por mes',1],['Todas las semanas',2],['Todos los días',3]]},
+ {q:'Si un activo tuyo sube 40% en dos meses, ¿qué hacés?',o:[['Vendo todo y aseguro la ganancia',1],['Vendo una parte y dejo correr el resto',2],['No vendo: si subió, por algo es',2],['Analizo si la tesis sigue válida antes de decidir',3]]},
+ {q:'¿Tu edad?',o:[['Más de 60',0],['Entre 45 y 60',1],['Entre 30 y 45',2],['Menos de 30',3]]},
+];
+const NIVELES=['Conservador','Moderado conservador','Moderado','Moderado agresivo','Agresivo'];
+const CARTERAS={
+ 0:{mm:40,letra:30,bono:20,cedear:10,accion:0,cripto:0},
+ 1:{mm:25,letra:25,bono:25,cedear:20,accion:5,cripto:0},
+ 2:{mm:15,letra:15,bono:25,cedear:30,accion:10,cripto:5},
+ 3:{mm:10,letra:10,bono:15,cedear:40,accion:15,cripto:10},
+ 4:{mm:5,letra:5,bono:10,cedear:45,accion:20,cripto:15},
+};
+const DESCPERFIL=[
+ 'Tu prioridad es no perder: liquidez remunerada, tasa fija corta en pesos y una porción chica dolarizada vía bonos. Nada que te quite el sueño.',
+ 'Base defensiva con una primera exposición seria a CEDEARs defensivos (KO, BRKB, SPY) para ganarle a la inflación en dólares.',
+ 'Cartera balanceada: el núcleo en SPY y bonos soberanos, satélites en acciones locales y una pizca de cripto. El perfil más común del inversor que ya pasó por varias crisis.',
+ 'Mayoría en renta variable global vía CEDEARs, apuesta táctica a acciones argentinas y cripto con peso real. Tolerás caídas del 30% sin vender.',
+ 'Máxima exposición a crecimiento: tecnología, acciones locales apalancadas al ciclo y cripto. La volatilidad es tu socia, no tu enemiga.',
+];
+function renderQuiz(){
+  $('#quiz').innerHTML=QUIZ.map((it,i)=>`<div class="q"><h3><span class="qnum">${String(i+1).padStart(2,'0')}</span>${it.q}</h3>
+    <div class="opts">${it.o.map(([txt,v],j)=>`<label><input type="radio" name="q${i}" value="${v}"><span>${txt}</span></label>`).join('')}</div></div>`).join('');
+  $('#quiz').querySelectorAll('input[type=radio]').forEach(r=>r.onchange=e=>{
+    e.target.closest('.opts').querySelectorAll('label').forEach(l=>l.classList.remove('sel'));
+    e.target.closest('label').classList.add('sel');
+  });
+  if(S.perfil) mostrarPerfil();
+}
+function calcularPerfil(){
+  let score=0,resp=0;
+  QUIZ.forEach((_,i)=>{ const r=document.querySelector(`input[name=q${i}]:checked`); if(r){score+=parseInt(r.value);resp++;} });
+  if(resp<QUIZ.length){toast(`Te faltan ${QUIZ.length-resp} respuestas`);return;}
+  const max=45, pct=score/max;
+  const nivel=pct<.22?0:pct<.42?1:pct<.62?2:pct<.82?3:4;
+  S.perfil={nivel,score,fecha:hoy()}; save(); mostrarPerfil(); renderPortfolio();
+}
+function mostrarPerfil(){
+  const p=S.perfil, c=CARTERAS[p.nivel];
+  $('#perfil-out').innerHTML=`<div class="perfil-result">
+    <h3>${NIVELES[p.nivel]}</h3>
+    <p class="muted" style="margin-bottom:14px">${DESCPERFIL[p.nivel]} <span class="mono">(puntaje ${p.score}/45 · ${p.fecha})</span></p>
+    <div class="tblwrap"><table><thead><tr><th>Clase</th><th class="num">% ideal</th><th>Con qué se arma en IOL</th></tr></thead><tbody>
+      <tr><td>Liquidez remunerada</td><td class="num">${c.mm}%</td><td class="name">FCI money market t+0</td></tr>
+      <tr><td>Renta fija en pesos</td><td class="num">${c.letra}%</td><td class="name">Lecap / Boncap / Boncer (CER)</td></tr>
+      <tr><td>Bonos soberanos USD</td><td class="num">${c.bono}%</td><td class="name">AL30, GD30, GD35…</td></tr>
+      <tr><td>CEDEARs</td><td class="num">${c.cedear}%</td><td class="name">Núcleo SPY/QQQ + empresas puntuales</td></tr>
+      <tr><td>Acciones argentinas</td><td class="num">${c.accion}%</td><td class="name">GGAL, YPFD, PAMP…</td></tr>
+      <tr><td>Cripto</td><td class="num">${c.cripto}%</td><td class="name">BTC/ETH (fuera de IOL) o ETF vía CEDEAR</td></tr>
+    </tbody></table></div>
+    <p class="muted" style="margin-top:12px;font-size:.78rem">Orientación educativa según tus respuestas, no asesoramiento financiero. La comparación contra tu cartera real está en "Mi portfolio".</p></div>`;
+}
+
+/* ============================ DATOS ============================ */
+function exportar(){
+  const blob=new Blob([JSON.stringify(S,null,2)],{type:'application/json'});
+  const a=document.createElement('a'); a.href=URL.createObjectURL(blob);
+  a.download='inverti-con-claude-respaldo-'+hoy()+'.json'; a.click();
+}
+function importar(file){
+  const r=new FileReader();
+  r.onload=()=>{ try{ const j=JSON.parse(r.result); if(!j.ops)throw 0; S=Object.assign({ops:[],planes:[],prices:{},vars:{},dolares:{},perfil:null,snapshots:[]},j); save(); renderAll(); toast('Respaldo importado'); }catch(e){ toast('Archivo inválido'); } };
+  r.readAsText(file);
+}
+
+/* ============================ INIT ============================ */
+function renderAll(){ renderExplorar(); renderPortfolio(); renderPlanes(); }
+document.addEventListener('DOMContentLoaded',()=>{
+  /* nav */
+  $('#nav').querySelectorAll('button').forEach(b=>b.onclick=()=>{
+    $('#nav').querySelectorAll('button').forEach(x=>x.classList.remove('active'));
+    document.querySelectorAll('section.tab').forEach(s=>s.classList.remove('active'));
+    b.classList.add('active'); $('#tab-'+b.dataset.tab).classList.add('active');
+  });
+  selectActivos();
+  $('#op-fecha').value=hoy(); $('#pl-inicio').value=hoy();
+  $('#buscador').oninput=renderExplorar; $('#filtro-clase').onchange=renderExplorar;
+  $('#btn-precios').onclick=fetchPrecios;
+  $('#btn-op').onclick=()=>{
+    const t=$('#op-activo').value, cant=parseFloat($('#op-cant').value);
+    let precio=parseFloat($('#op-precio').value); if(!precio) precio=px(t);
+    if(registrarOp($('#op-tipo').value,t,cant,precio,$('#op-fecha').value)){ $('#op-cant').value=''; $('#op-precio').value=''; toast('Operación registrada'); }
+  };
+  ['op-activo','op-cant','op-precio','op-tipo'].forEach(id=>$('#'+id).oninput=$('#'+id).onchange=()=>{
+    const t=$('#op-activo').value, c=parseFloat($('#op-cant').value)||0, pr=parseFloat($('#op-precio').value)||px(t)||0;
+    $('#op-preview').textContent=c&&pr?`Total: $ ${fmt(c*pr,0)} ARS${mep()?' · US$ '+fmt(c*pr/mep()):''} · precio ${$('#op-precio').value?'manual':'último de mercado'}`:'';
+  });
+  $('#btn-plan').onclick=()=>{
+    const monto=parseFloat($('#pl-monto').value);
+    if(!monto||monto<=0){toast('Ingresá un monto válido');return;}
+    S.planes.push({t:$('#pl-activo').value,monto,frec:$('#pl-frec').value,proxima:$('#pl-inicio').value||hoy(),ejecutadas:0});
+    save(); ejecutarPlanes(); renderAll(); toast('Plan creado');
+  };
+  $('#btn-quiz').onclick=calcularPerfil;
+  $('#btn-export').onclick=exportar;
+  $('#inp-import').onchange=e=>{ if(e.target.files[0]) importar(e.target.files[0]); };
+  $('#btn-reset').onclick=()=>{ if(confirm('¿Borrar TODAS las operaciones, planes y perfil? No hay vuelta atrás sin respaldo.')){ localStorage.removeItem(KEY); S=load(); renderAll(); } };
+  renderQuiz(); renderTape(); renderAll();
+  fetchDolares().then(()=>{ fetchPrecios().then(()=>ejecutarPlanes()); });
+});
+</script>
+</body>
+</html>

@@ -1,0 +1,26 @@
+{
+  "ops": [
+    {"id":1,"tipo":"compra","t":"CVX","cant":10,"precio":12134,"fecha":"2026-01-01","origen":"import-IOL"},
+    {"id":2,"tipo":"compra","t":"GOOGL","cant":6,"precio":7954.17,"fecha":"2026-01-01","origen":"import-IOL"},
+    {"id":3,"tipo":"compra","t":"KO","cant":27,"precio":14288.20,"fecha":"2026-01-01","origen":"import-IOL"},
+    {"id":4,"tipo":"compra","t":"MCD","cant":22,"precio":15179.77,"fecha":"2026-01-01","origen":"import-IOL"},
+    {"id":5,"tipo":"compra","t":"NVDA","cant":12,"precio":9974.17,"fecha":"2026-01-01","origen":"import-IOL"},
+    {"id":6,"tipo":"compra","t":"PG","cant":6,"precio":13129.17,"fecha":"2026-01-01","origen":"import-IOL"},
+    {"id":7,"tipo":"compra","t":"QQQ","cant":7,"precio":41465.71,"fecha":"2026-01-01","origen":"import-IOL"},
+    {"id":8,"tipo":"compra","t":"SPY","cant":18,"precio":19000,"fecha":"2026-01-01","origen":"import-IOL"}
+  ],
+  "planes": [],
+  "prices": {
+    "CVX":17190,"GOOGL":9880,"KO":26600,"MCD":18580,
+    "NVDA":12940,"PG":16120,"QQQ":56725,"SPY":19940
+  },
+  "vars": {
+    "CVX":3.24,"GOOGL":0.76,"KO":0.68,"MCD":0.86,
+    "NVDA":1.41,"PG":1.51,"QQQ":0.75,"SPY":1.63
+  },
+  "dolares": {},
+  "perfil": null,
+  "snapshots": [
+    {"d":"2026-07-04","usd":1603.36}
+  ]
+}
