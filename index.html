@@ -140,6 +140,13 @@ footer{border-top:1px solid var(--line);padding:20px 22px;color:var(--muted);fon
 .sync button:hover{border-color:var(--gold-dim)}
 .sync .who{color:var(--gold);font-weight:600}
 @media(max-width:720px){.sync{position:static;justify-content:flex-end;padding:8px 22px 0;top:0;right:0}}
+
+/* ---------- Tooltip flotante (Explorar) ---------- */
+.tt{position:fixed;z-index:200;max-width:280px;background:var(--panel);border:1px solid var(--gold-dim);border-radius:10px;padding:12px 14px;font-size:.82rem;box-shadow:0 8px 24px rgba(0,0,0,.4);pointer-events:none;opacity:0;transform:translateY(4px);transition:opacity .15s,transform .15s}
+.tt.show{opacity:1;transform:translateY(0)}
+.tt .tt-t{font-family:var(--f-display);font-weight:700;color:var(--gold);margin-bottom:4px;font-size:.88rem}
+.tt .tt-d{color:var(--text);line-height:1.4;margin-bottom:8px}
+.tt .tt-r{display:flex;align-items:center;gap:6px;font-family:var(--f-mono);font-size:.72rem;color:var(--muted)}
 </style>
 </head>
 <body>
@@ -147,14 +154,14 @@ footer{border-top:1px solid var(--line);padding:20px 22px;color:var(--muted);fon
 <header style="position:relative">
   <div class="sync" id="sync"><span class="dot"></span><span class="lbl" id="sync-lbl">Conectando…</span><button id="btn-login">Iniciar sesión</button></div>
   <div class="brand">
-    <h1>INVERTÍ <span>CON CLAUDE</span></h1>
+    <h1>🚀 INVERSIÓN <span>MELLIS MyA</span></h1>
     <div class="sub">Dashboard educativo · Mercado argentino · Pensado para operar en InvertirOnline</div>
   </div>
   <div class="tape" id="tape"><div class="quote"><div class="lbl">Cargando dólares…</div><div class="val mono">—</div></div></div>
 </header>
 
 <nav id="nav">
-  <button data-tab="portfolio" class="active">Mi portfolio</button>
+  <button data-tab="portfolio" class="active">Portfolio Total juntos</button>
   <button data-tab="explorar">Explorar activos</button>
   <button data-tab="operar">Operar</button>
   <button data-tab="planes">Planes recurrentes</button>
@@ -166,7 +173,7 @@ footer{border-top:1px solid var(--line);padding:20px 22px;color:var(--muted);fon
 
 <!-- ================= PORTFOLIO ================= -->
 <section class="tab active" id="tab-portfolio">
-  <h2>Mi portfolio</h2>
+  <h2>Portfolio Total juntos</h2>
   <p class="desc">Tus posiciones valuadas a último precio, en pesos y en dólar MEP. Todo se guarda en este navegador.</p>
   <div class="seg" id="seg-tit">
     <button data-t="" class="active">Ambos</button>
@@ -281,6 +288,7 @@ footer{border-top:1px solid var(--line);padding:20px 22px;color:var(--muted);fon
 </main>
 
 <dialog id="ficha"></dialog>
+<div class="tt" id="tt"></div>
 <div class="toast" id="toast"></div>
 
 <footer>
@@ -810,8 +818,32 @@ function renderExplorar(){
         <td class="num ${v>0?'up':v<0?'down':''}">${v!=null?fmt(v)+'%':'—'}</td>
         <td class="num">${'●'.repeat(a.r)}${'○'.repeat(5-a.r)}</td></tr>`;
     }).join('');
-  tb.querySelectorAll('tr').forEach(tr=>tr.onclick=()=>ficha(tr.dataset.t));
+  tb.querySelectorAll('tr').forEach(tr=>{
+    tr.onclick=()=>ficha(tr.dataset.t);
+    tr.addEventListener('mouseenter',e=>mostrarTT(tr.dataset.t,e));
+    tr.addEventListener('mousemove',e=>posicionarTT(e));
+    tr.addEventListener('mouseleave',ocultarTT);
+    tr.addEventListener('touchstart',e=>{ mostrarTT(tr.dataset.t,e.touches[0]); },{passive:true});
+    tr.addEventListener('touchend',()=>setTimeout(ocultarTT,1200));
+  });
 }
+const RIESGO_LBL={1:'Muy bajo',2:'Bajo',3:'Moderado',4:'Alto',5:'Muy alto'};
+function mostrarTT(t,ev){
+  const a=A(t); if(!a) return;
+  const el=$('#tt');
+  el.innerHTML=`<div class="tt-t">${a.t} · ${CLASES[a.c].n}</div><div class="tt-d">${a.d}</div><div class="tt-r">Riesgo: ${'●'.repeat(a.r)}${'○'.repeat(5-a.r)} ${RIESGO_LBL[a.r]}</div>`;
+  posicionarTT(ev);
+  el.classList.add('show');
+}
+function posicionarTT(ev){
+  const el=$('#tt');
+  const pad=16, w=280, vw=window.innerWidth, vh=window.innerHeight;
+  let x=ev.clientX+pad, y=ev.clientY+pad;
+  if(x+w>vw-10) x=ev.clientX-w-pad;
+  if(y>vh-160) y=ev.clientY-160;
+  el.style.left=x+'px'; el.style.top=y+'px';
+}
+function ocultarTT(){ $('#tt').classList.remove('show'); }
 function ficha(t){
   const a=A(t), d=$('#ficha');
   d.innerHTML=`<button class="close" onclick="this.closest('dialog').close()">×</button>
@@ -1267,7 +1299,7 @@ function mostrarPerfil(){
       <tr><td>Acciones argentinas</td><td class="num">${c.accion}%</td><td class="name">GGAL, YPFD, PAMP…</td></tr>
       <tr><td>Cripto</td><td class="num">${c.cripto}%</td><td class="name">BTC/ETH (fuera de IOL) o ETF vía CEDEAR</td></tr>
     </tbody></table></div>
-    <p class="muted" style="margin-top:12px;font-size:.78rem">Orientación educativa según tus respuestas, no asesoramiento financiero. La comparación contra tu cartera real está en "Mi portfolio".</p></div>`;
+    <p class="muted" style="margin-top:12px;font-size:.78rem">Orientación educativa según tus respuestas, no asesoramiento financiero. La comparación contra tu cartera real está en "Portfolio Total juntos".</p></div>`;
 }
 
 /* ============================ DATOS ============================ */
