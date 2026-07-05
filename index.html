@@ -1031,36 +1031,45 @@ function modalReparto(t){
   d.innerHTML=`<button class="close" onclick="this.closest('dialog').close()">×</button>
     <span class="pill ${a.c}">${CLASES[a.c].n}</span>
     <h3 style="margin-top:8px">Repartir ${t} · ${a.n}</h3>
-    <p class="muted" style="margin:10px 0 6px;font-size:.88rem">Total: <strong>${fmt(pos.cant,4)}</strong> unidades · PPC $ ${fmt(ppc)}. Asigná cuántas le corresponden a cada uno; la suma debe dar el total.</p>
-    <div class="formgrid" style="margin-top:12px">
-      <div class="field"><label>Mateo</label><input type="number" id="r-mateo" min="0" max="${pos.cant}" step="any" value="${cantM||pos.cant/2}"></div>
-      <div class="field"><label>Agustín</label><input type="number" id="r-agus" min="0" max="${pos.cant}" step="any" value="${cantA||pos.cant/2}"></div>
+    <p class="muted" style="margin:10px 0 6px;font-size:.88rem">La app tiene registradas <strong>${fmt(pos.cant,4)}</strong> unidades (PPC $ ${fmt(ppc)}). Si no coincide con lo que ves en IOL, corregí el total acá abajo antes de repartir.</p>
+    <div class="field" style="margin-bottom:10px">
+      <label>Cantidad total real (según IOL)</label>
+      <input type="number" id="r-total" min="0" step="any" value="${pos.cant}">
+    </div>
+    <div class="formgrid">
+      <div class="field"><label>Mateo</label><input type="number" id="r-mateo" min="0" step="any" value="${cantM||pos.cant/2}"></div>
+      <div class="field"><label>Agustín</label><input type="number" id="r-agus" min="0" step="any" value="${cantA||pos.cant/2}"></div>
     </div>
     <div id="r-preview" style="margin-top:12px;font-size:.85rem"></div>
     <div style="display:flex;gap:8px;margin-top:14px">
       <button class="btn primary" id="r-confirm" style="flex:1">Confirmar reparto</button>
       <button class="btn" id="r-mitad" style="flex:0 0 auto">50/50</button>
     </div>
-    <p class="muted" style="margin-top:10px;font-size:.75rem">El reparto reescribe las operaciones de ${t} como dos compras (una por titular) manteniendo el PPC y la fecha original. El historial detallado previo de este activo se consolida.</p>`;
+    <p class="muted" style="margin-top:10px;font-size:.75rem">Al confirmar, se reemplazan TODAS las operaciones de ${t} (incluidas duplicadas o sin titular) por dos compras nuevas — una por titular — al PPC actual y usando el total que hayas puesto arriba.</p>`;
   d.showModal();
+  const total=()=>parseFloat($('#r-total').value)||0;
   const upd=()=>{
+    const tot=total();
     const cm=parseFloat($('#r-mateo').value)||0, ca=parseFloat($('#r-agus').value)||0;
-    const suma=cm+ca, ok=Math.abs(suma-pos.cant)<0.0001;
+    const suma=cm+ca, ok=tot>0&&Math.abs(suma-tot)<0.0001;
     const vM=pr?cm*pr:null, vA=pr?ca*pr:null;
+    const corrigiendo=Math.abs(tot-pos.cant)>0.0001;
     $('#r-preview').innerHTML=`<div class="card" style="padding:12px;border-color:${ok?'var(--line)':'var(--down)'}">
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;font-size:.82rem">
         <div><span class="k-lbl">Mateo</span><div class="mono">${fmt(cm,4)} un.${vM!=null?' · $ '+fmt(vM,0):''}${vM!=null&&m?' · US$ '+fmt(vM/m):''}</div></div>
         <div><span class="k-lbl">Agustín</span><div class="mono">${fmt(ca,4)} un.${vA!=null?' · $ '+fmt(vA,0):''}${vA!=null&&m?' · US$ '+fmt(vA/m):''}</div></div>
       </div>
-      <div class="mono ${ok?'up':'down'}" style="margin-top:8px;font-size:.78rem">Suma: ${fmt(suma,4)} / ${fmt(pos.cant,4)} ${ok?'✓':'✗ debe coincidir con el total'}</div>
+      <div class="mono ${ok?'up':'down'}" style="margin-top:8px;font-size:.78rem">Suma: ${fmt(suma,4)} / ${fmt(tot,4)} ${ok?'✓':'✗ debe coincidir con el total'}</div>
+      ${corrigiendo?`<div class="mono" style="margin-top:4px;font-size:.75rem;color:var(--gold)">⚠ Vas a corregir el total registrado de ${fmt(pos.cant,4)} → ${fmt(tot,4)} unidades</div>`:''}
     </div>`;
     $('#r-confirm').disabled=!ok;
     $('#r-confirm').style.opacity=ok?1:.45;
     return ok;
   };
-  $('#r-mateo').oninput=()=>{ const cm=parseFloat($('#r-mateo').value)||0; $('#r-agus').value=Math.max(0,+(pos.cant-cm).toFixed(6)); upd(); };
-  $('#r-agus').oninput=()=>{ const ca=parseFloat($('#r-agus').value)||0; $('#r-mateo').value=Math.max(0,+(pos.cant-ca).toFixed(6)); upd(); };
-  $('#r-mitad').onclick=()=>{ $('#r-mateo').value=+(pos.cant/2).toFixed(6); $('#r-agus').value=+(pos.cant/2).toFixed(6); upd(); };
+  $('#r-total').oninput=()=>{ const tot=total(); $('#r-mateo').value=+(tot/2).toFixed(6); $('#r-agus').value=+(tot/2).toFixed(6); upd(); };
+  $('#r-mateo').oninput=()=>{ const cm=parseFloat($('#r-mateo').value)||0; $('#r-agus').value=Math.max(0,+(total()-cm).toFixed(6)); upd(); };
+  $('#r-agus').oninput=()=>{ const ca=parseFloat($('#r-agus').value)||0; $('#r-mateo').value=Math.max(0,+(total()-ca).toFixed(6)); upd(); };
+  $('#r-mitad').onclick=()=>{ const tot=total(); $('#r-mateo').value=+(tot/2).toFixed(6); $('#r-agus').value=+(tot/2).toFixed(6); upd(); };
   upd();
   $('#r-confirm').onclick=()=>{
     if(!upd()) return;
@@ -1070,7 +1079,7 @@ function modalReparto(t){
     if(cm>0) S.ops.push({id:Date.now()+Math.random(),tipo:'compra',t,cant:cm,precio:ppc,fecha:fechaOrig,origen:'reparto',titular:'Mateo'});
     if(ca>0) S.ops.push({id:Date.now()+Math.random(),tipo:'compra',t,cant:ca,precio:ppc,fecha:fechaOrig,origen:'reparto',titular:'Agustín'});
     save(); renderAll(); d.close();
-    toast(`${t} repartido: Mateo ${fmt(cm,2)} · Agustín ${fmt(ca,2)}`);
+    toast(`${t} corregido y repartido: Mateo ${fmt(cm,2)} · Agustín ${fmt(ca,2)}`);
   };
 }
 
@@ -1346,6 +1355,17 @@ document.addEventListener('DOMContentLoaded',()=>{
     syncUI('err','Sin conexión con la nube');
   });
 });
+
+/* Exponer al scope global: type="module" aísla estas funciones, pero el HTML
+   generado dinámicamente (botones con onclick="...") necesita encontrarlas en window. */
+window.ficha=ficha;
+window.borrarPlan=borrarPlan;
+window.borrarOp=borrarOp;
+window.modalReparto=modalReparto;
+window.limpiarSinAsignar=limpiarSinAsignar;
+window.borrarPosicion=borrarPosicion;
+window.modalVenta=modalVenta;
+window.updVentaPreview=updVentaPreview;
 </script>
 </body>
 </html>
