@@ -121,6 +121,14 @@ dialog .close{float:right;background:none;border:none;color:var(--muted);font-si
 .notice{border:1px solid var(--line);border-left:3px solid var(--gold);background:var(--panel2);padding:12px 14px;border-radius:8px;font-size:.85rem;color:var(--muted);margin-bottom:16px}
 footer{border-top:1px solid var(--line);padding:20px 22px;color:var(--muted);font-size:.78rem;max-width:1180px;margin:0 auto}
 .toast{position:fixed;bottom:18px;left:50%;transform:translateX(-50%);background:var(--panel);border:1px solid var(--gold-dim);padding:10px 20px;border-radius:8px;font-size:.85rem;z-index:99;display:none}
+
+/* ---------- Control segmentado (filtro mellizos) ---------- */
+.seg{display:inline-flex;background:var(--panel2);border:1px solid var(--line);border-radius:99px;padding:4px;gap:2px;margin-bottom:18px}
+.seg button{border:none;background:transparent;color:var(--muted);padding:8px 24px;border-radius:99px;font-size:.86rem;font-weight:600;transition:background .2s,color .2s;font-family:var(--f-body)}
+.seg button.active{background:var(--gold);color:#171207;box-shadow:0 2px 8px rgba(233,180,76,.3)}
+.seg button:hover:not(.active){color:var(--text)}
+.seg button[data-t="Mateo"].active{background:#5BA8FF;box-shadow:0 2px 8px rgba(91,168,255,.3)}
+.seg button[data-t="Agustín"].active{background:#33D17A;box-shadow:0 2px 8px rgba(51,209,122,.3)}
 </style>
 </head>
 <body>
@@ -148,19 +156,24 @@ footer{border-top:1px solid var(--line);padding:20px 22px;color:var(--muted);fon
 <section class="tab active" id="tab-portfolio">
   <h2>Mi portfolio</h2>
   <p class="desc">Tus posiciones valuadas a último precio, en pesos y en dólar MEP. Todo se guarda en este navegador.</p>
+  <div class="seg" id="seg-tit">
+    <button data-t="" class="active">Ambos</button>
+    <button data-t="Mateo">Mateo</button>
+    <button data-t="Agustín">Agustín</button>
+  </div>
   <div class="grid kpis" id="kpis"></div>
   <div class="tblwrap"><table id="tbl-pos">
-    <thead><tr><th>Activo</th><th>Clase</th><th class="num">Cantidad</th><th class="num">PPC</th><th class="num">Último</th><th class="num">Valor ARS</th><th class="num">Valor USD</th><th class="num">P/L ARS</th><th class="num">P/L %</th><th>Acciones</th></tr></thead>
+    <thead><tr><th>Activo</th><th class="num">Cantidad</th><th class="num">PPC</th><th class="num">Último</th><th class="num">Valor ARS</th><th class="num">Valor USD</th><th class="num">P/L ARS</th><th class="num">P/L %</th><th class="num">Mateo</th><th class="num">Agustín</th><th>Acciones</th></tr></thead>
     <tbody></tbody>
   </table></div>
   <div class="charts2">
     <div class="chartbox"><h4>Composición por clase</h4><canvas id="ch-clases"></canvas></div>
     <div class="chartbox"><h4>Cartera actual vs. ideal (según tu perfil)</h4><canvas id="ch-ideal"></canvas></div>
   </div>
-  <div class="chartbox" style="margin-top:14px"><h4>Evolución patrimonial (USD MEP)</h4><canvas id="ch-evo"></canvas></div>
+  <div class="chartbox" style="margin-top:14px"><h4>Evolución patrimonial por titular (USD MEP)</h4><canvas id="ch-evo"></canvas></div>
   <h2 style="margin-top:26px">Historial de operaciones</h2>
   <div class="tblwrap"><table id="tbl-ops">
-    <thead><tr><th>Fecha</th><th>Tipo</th><th>Activo</th><th class="num">Cantidad</th><th class="num">Precio</th><th class="num">Total ARS</th><th class="num">Comisión</th><th>Origen</th><th></th></tr></thead>
+    <thead><tr><th>Fecha</th><th>Tipo</th><th>Titular</th><th>Activo</th><th class="num">Cantidad</th><th class="num">Precio</th><th class="num">Total ARS</th><th class="num">Comisión</th><th>Origen</th><th></th></tr></thead>
     <tbody></tbody>
   </table></div>
 </section>
@@ -197,6 +210,7 @@ footer{border-top:1px solid var(--line);padding:20px 22px;color:var(--muted);fon
   <div class="card">
     <div class="formgrid">
       <div class="field"><label>Operación</label><select id="op-tipo"><option value="compra">Compra</option><option value="venta">Venta</option></select></div>
+      <div class="field"><label>Titular</label><select id="op-titular"><option value="Mateo">Mateo</option><option value="Agustín">Agustín</option></select></div>
       <div class="field"><label>Activo</label><select id="op-activo"></select></div>
       <div class="field"><label>Cantidad</label><input type="number" id="op-cant" min="0" step="any" placeholder="0"></div>
       <div class="field"><label>Precio unitario ARS</label><input type="number" id="op-precio" min="0" step="any" placeholder="usa último si vacío"></div>
@@ -214,6 +228,7 @@ footer{border-top:1px solid var(--line);padding:20px 22px;color:var(--muted);fon
   <div class="card" style="margin-bottom:16px">
     <div class="formgrid">
       <div class="field"><label>Activo</label><select id="pl-activo"></select></div>
+      <div class="field"><label>Titular</label><select id="pl-titular"><option value="Mateo">Mateo</option><option value="Agustín">Agustín</option></select></div>
       <div class="field"><label>Monto por cuota (ARS)</label><input type="number" id="pl-monto" min="0" step="any" placeholder="50000"></div>
       <div class="field"><label>Frecuencia</label><select id="pl-frec"><option value="7">Semanal</option><option value="14">Quincenal</option><option value="30" selected>Mensual</option><option value="90">Trimestral</option></select></div>
       <div class="field"><label>Inicio</label><input type="date" id="pl-inicio"></div>
@@ -221,7 +236,7 @@ footer{border-top:1px solid var(--line);padding:20px 22px;color:var(--muted);fon
     </div>
   </div>
   <div class="tblwrap"><table id="tbl-planes">
-    <thead><tr><th>Activo</th><th class="num">Monto</th><th>Frecuencia</th><th>Próxima cuota</th><th class="num">Ejecutadas</th><th></th></tr></thead>
+    <thead><tr><th>Activo</th><th>Titular</th><th class="num">Monto</th><th>Frecuencia</th><th>Próxima cuota</th><th class="num">Ejecutadas</th><th></th></tr></thead>
     <tbody></tbody>
   </table></div>
 </section>
@@ -731,14 +746,33 @@ function selectActivos(){
   const opts=ASSETS.map(a=>`<option value="${a.t}">${a.t} · ${a.n}</option>`).join('');
   $('#op-activo').innerHTML=opts; $('#pl-activo').innerHTML=opts;
 }
-function registrarOp(tipo,t,cant,precio,fecha,origen){
+function registrarOp(tipo,t,cant,precio,fecha,origen,titular){
   if(!cant||cant<=0||!precio||precio<=0){toast('Cantidad y precio deben ser mayores a cero');return false;}
   if(tipo==='venta'){
-    const pos=posiciones()[t];
-    if(!pos||pos.cant<cant){toast('No tenés esa cantidad de '+t+' para vender');return false;}
+    if(titular){
+      const pt=posTit()[t]?.[titular];
+      if(!pt||pt.cant<cant-0.0001){toast(titular+' no tiene esa cantidad de '+t+' para vender');return false;}
+    }else{
+      const pos=posiciones()[t];
+      if(!pos||pos.cant<cant){toast('No tenés esa cantidad de '+t+' para vender');return false;}
+    }
   }
-  S.ops.push({id:Date.now()+Math.random(),tipo,t,cant,precio,fecha:fecha||hoy(),origen:origen||'manual'});
+  S.ops.push({id:Date.now()+Math.random(),tipo,t,cant,precio,fecha:fecha||hoy(),origen:origen||'manual',titular:titular||null});
   save(); snapshot(); renderAll(); return true;
+}
+/* posiciones por titular: {ticker: {Mateo:{cant,costo}, 'Agustín':{...}, sin:{...}}} */
+function posTit(){
+  const p={};
+  [...S.ops].sort((a,b)=>a.fecha.localeCompare(b.fecha)).forEach(o=>{
+    const k=o.titular||'sin';
+    p[o.t]=p[o.t]||{};
+    p[o.t][k]=p[o.t][k]||{cant:0,costo:0};
+    const x=p[o.t][k];
+    if(o.tipo==='compra'){ x.costo+=o.cant*o.precio; x.cant+=o.cant; }
+    else{ const ppc=x.cant>0?x.costo/x.cant:0; x.costo-=o.cant*ppc; x.cant-=o.cant; }
+  });
+  Object.keys(p).forEach(t=>Object.keys(p[t]).forEach(k=>{ if(p[t][k].cant<=1e-9) delete p[t][k]; }));
+  return p;
 }
 function posiciones(){
   const p={};
@@ -761,7 +795,7 @@ function ejecutarPlanes(){
       const precio=px(pl.t);
       if(precio){
         const cant=pl.monto/precio;
-        S.ops.push({id:Date.now()+Math.random(),tipo:'compra',t:pl.t,cant,precio,fecha:next.toISOString().slice(0,10),origen:'plan'});
+        S.ops.push({id:Date.now()+Math.random(),tipo:'compra',t:pl.t,cant,precio,fecha:next.toISOString().slice(0,10),origen:'plan',titular:pl.titular||null});
         pl.ejecutadas=(pl.ejecutadas||0)+1; n++;
       }
       next.setDate(next.getDate()+parseInt(pl.frec));
@@ -772,11 +806,11 @@ function ejecutarPlanes(){
 }
 function renderPlanes(){
   $('#tbl-planes tbody').innerHTML=S.planes.map((pl,i)=>
-    `<tr><td><strong>${pl.t}</strong></td><td class="num">$ ${fmt(pl.monto,0)}</td>
+    `<tr><td><strong>${pl.t}</strong></td><td>${pl.titular||'—'}</td><td class="num">$ ${fmt(pl.monto,0)}</td>
      <td>${{7:'Semanal',14:'Quincenal',30:'Mensual',90:'Trimestral'}[pl.frec]}</td>
      <td>${pl.proxima}</td><td class="num">${pl.ejecutadas||0}</td>
      <td><button class="btn sm danger" onclick="borrarPlan(${i})">Eliminar</button></td></tr>`).join('')
-   ||'<tr><td colspan="6" class="muted" style="font-family:var(--f-body)">Sin planes activos. Creá el primero arriba.</td></tr>';
+   ||'<tr><td colspan="7" class="muted" style="font-family:var(--f-body)">Sin planes activos. Creá el primero arriba.</td></tr>';
 }
 function borrarPlan(i){ S.planes.splice(i,1); save(); renderPlanes(); }
 
@@ -784,8 +818,14 @@ function borrarPlan(i){ S.planes.splice(i,1); save(); renderPlanes(); }
 function snapshot(){
   if(!mep())return;
   const tot=totales(); if(tot.ars<=0)return;
+  const pT=posTit(); let aM=0,aA=0;
+  Object.entries(pT).forEach(([t,tits])=>{
+    const pr=px(t); if(!pr)return;
+    if(tits['Mateo'])aM+=tits['Mateo'].cant*pr;
+    if(tits['Agustín'])aA+=tits['Agustín'].cant*pr;
+  });
   const d=hoy(); S.snapshots=S.snapshots.filter(s=>s.d!==d);
-  S.snapshots.push({d,usd:tot.ars/mep()}); S.snapshots.sort((a,b)=>a.d.localeCompare(b.d));
+  S.snapshots.push({d,usd:tot.ars/mep(),usdM:aM/mep(),usdA:aA/mep()}); S.snapshots.sort((a,b)=>a.d.localeCompare(b.d));
   if(S.snapshots.length>365)S.snapshots=S.snapshots.slice(-365);
   save();
 }
@@ -797,39 +837,77 @@ function totales(){
 
 /* ============================ PORTFOLIO RENDER ============================ */
 let charts={};
+let filtroTit='';
 function chart(id,cfg){ if(charts[id])charts[id].destroy(); charts[id]=new Chart($(id),cfg); }
+function vistaPos(){
+  if(!filtroTit) return posiciones();
+  const pT=posTit(), out={};
+  Object.entries(pT).forEach(([t,tits])=>{ const x=tits[filtroTit]; if(x&&x.cant>1e-9) out[t]={cant:x.cant,costo:x.costo}; });
+  return out;
+}
+function vistaOps(){ return filtroTit?S.ops.filter(o=>o.titular===filtroTit):S.ops; }
+function vistaTotales(){
+  const pos=vistaPos(); let ars=0,costo=0;
+  Object.entries(pos).forEach(([t,p])=>{ const pr=px(t); if(pr)ars+=p.cant*pr; costo+=p.costo; });
+  return {ars,costo,pl:ars-costo};
+}
 
 function renderPortfolio(){
-  const pos=posiciones(), tot=totales(), m=mep();
+  const pos=vistaPos(), tot=vistaTotales(), m=mep();
   $('#kpis').innerHTML=`
     <div class="card"><div class="k-lbl">Valor total</div><div class="k-val">$ ${fmt(tot.ars,0)}</div><div class="k-sub">${m?'US$ '+fmt(tot.ars/m,0)+' MEP':''}</div></div>
     <div class="card"><div class="k-lbl">Invertido (costo)</div><div class="k-val">$ ${fmt(tot.costo,0)}</div></div>
     <div class="card"><div class="k-lbl">Resultado</div><div class="k-val ${tot.pl>=0?'up':'down'}">$ ${fmt(tot.pl,0)}</div><div class="k-sub ${tot.pl>=0?'up':'down'}">${tot.costo>0?fmt(tot.pl/tot.costo*100)+'%':''}</div></div>
-    <div class="card"><div class="k-lbl">Posiciones</div><div class="k-val">${Object.keys(pos).length}</div><div class="k-sub">${S.ops.length} operaciones</div></div>`;
+    <div class="card"><div class="k-lbl">Posiciones${filtroTit?' de '+filtroTit:''}</div><div class="k-val">${Object.keys(pos).length}</div><div class="k-sub">${vistaOps().length} operaciones</div></div>`;
 
-  /* comisiones acumuladas */
-  const comTotal=calcComisiones();
+  /* comisiones acumuladas (de la vista) */
+  const comTotal=calcComisiones(vistaOps());
   $('#kpis').innerHTML+=`
-    <div class="card"><div class="k-lbl">Comisiones IOL pagadas</div><div class="k-val down">$ ${fmt(comTotal.ars,0)}</div><div class="k-sub">${m?'US$ '+fmt(comTotal.ars/m)+' MEP':''} · ${tot.costo>0?fmt(comTotal.ars/tot.costo*100,2)+'% s/invertido':''}</div></div>`;
+    <div class="card"><div class="k-lbl">Comisiones IOL${filtroTit?' de '+filtroTit:''}</div><div class="k-val down">$ ${fmt(comTotal.ars,0)}</div><div class="k-sub">${m?'US$ '+fmt(comTotal.ars/m)+' MEP':''} · ${tot.costo>0?fmt(comTotal.ars/tot.costo*100,2)+'% s/invertido':''}</div></div>`;
+
+  /* KPIs por mellizo (solo en vista Ambos) */
+  const pT=posTit();
+  if(!filtroTit){
+  const totTit={'Mateo':0,'Agustín':0,'sin':0};
+  Object.entries(pT).forEach(([t,tits])=>{
+    const pr=px(t); if(!pr)return;
+    Object.entries(tits).forEach(([k,x])=>{ totTit[k]=(totTit[k]||0)+x.cant*pr; });
+  });
+  $('#kpis').innerHTML+=`
+    <div class="card" style="border-left:3px solid #5BA8FF"><div class="k-lbl">Cartera de Mateo</div><div class="k-val">$ ${fmt(totTit['Mateo'],0)}</div><div class="k-sub">${m?'US$ '+fmt(totTit['Mateo']/m)+' MEP':''}</div></div>
+    <div class="card" style="border-left:3px solid #33D17A"><div class="k-lbl">Cartera de Agustín</div><div class="k-val">$ ${fmt(totTit['Agustín'],0)}</div><div class="k-sub">${m?'US$ '+fmt(totTit['Agustín']/m)+' MEP':''}</div></div>
+    ${totTit['sin']>0.01?`<div class="card" style="border-color:var(--gold-dim)"><div class="k-lbl">⚠ Sin asignar</div><div class="k-val">$ ${fmt(totTit['sin'],0)}</div><div class="k-sub">Usá "Repartir" en cada posición</div></div>`:''}`;
+  }
 
   $('#tbl-pos tbody').innerHTML=Object.entries(pos).map(([t,p])=>{
     const a=A(t),pr=px(t),ppc=p.costo/p.cant,val=pr?p.cant*pr:null,pl=val!=null?val-p.costo:null;
-    return `<tr><td><strong>${t}</strong></td><td><span class="pill ${a.c}">${CLASES[a.c].n}</span></td>
+    const tits=pT[t]||{};
+    const celda=k=>{
+      const x=tits[k];
+      if(!x||x.cant<=0) return '<span class="muted">—</span>';
+      const v=pr?x.cant*pr:null;
+      return `<div>${fmt(x.cant,2)} un.</div><div style="font-size:.75rem">${v!=null?'$ '+fmt(v,0):''}</div><div style="font-size:.72rem" class="muted">${v!=null&&m?'US$ '+fmt(v/m):''}</div>`;
+    };
+    const sinAsignar=tits['sin']&&tits['sin'].cant>0.0001;
+    return `<tr${sinAsignar?' style="border-left:2px solid var(--gold-dim)"':''}><td><strong>${t}</strong>${sinAsignar?' <span class="pill" style="color:var(--gold)">repartir</span>':''}</td>
       <td class="num">${fmt(p.cant,4)}</td><td class="num">$ ${fmt(ppc)}</td>
       <td class="num">${pr?'$ '+fmt(pr):'—'}</td><td class="num">${val!=null?'$ '+fmt(val,0):'—'}</td>
       <td class="num">${val!=null&&m?'US$ '+fmt(val/m):'—'}</td>
       <td class="num ${pl>=0?'up':'down'}">${pl!=null?'$ '+fmt(pl,0):'—'}</td>
       <td class="num ${pl>=0?'up':'down'}">${pl!=null&&p.costo>0?fmt(pl/p.costo*100)+'%':'—'}</td>
-      <td style="white-space:nowrap"><button class="btn sm" onclick="modalVenta('${t}',${p.cant})">Vender</button> <button class="btn sm danger" onclick="borrarPosicion('${t}')">Borrar</button></td></tr>`;
-  }).join('')||'<tr><td colspan="10" class="muted" style="font-family:var(--f-body)">Todavía no registraste operaciones. Arrancá en la pestaña Operar.</td></tr>';
+      <td class="num">${celda('Mateo')}</td>
+      <td class="num">${celda('Agustín')}</td>
+      <td style="white-space:nowrap"><button class="btn sm" onclick="modalReparto('${t}')">Repartir</button> <button class="btn sm" onclick="modalVenta('${t}',${p.cant})">Vender</button> <button class="btn sm danger" onclick="borrarPosicion('${t}')">Borrar</button></td></tr>`;
+  }).join('')||'<tr><td colspan="11" class="muted" style="font-family:var(--f-body)">Todavía no registraste operaciones. Arrancá en la pestaña Operar.</td></tr>';
 
-  $('#tbl-ops tbody').innerHTML=[...S.ops].sort((a,b)=>b.fecha.localeCompare(a.fecha)).map(o=>{
+  $('#tbl-ops tbody').innerHTML=[...vistaOps()].sort((a,b)=>b.fecha.localeCompare(a.fecha)).map(o=>{
     const montoOp=o.cant*o.precio, comOp=comision(montoOp);
     return `<tr><td>${o.fecha}</td><td class="${o.tipo==='compra'?'up':'down'}">${o.tipo.toUpperCase()}</td>
+     <td>${o.titular||'<span class="muted">—</span>'}</td>
      <td><strong>${o.t}</strong></td><td class="num">${fmt(o.cant,4)}</td><td class="num">$ ${fmt(o.precio)}</td>
      <td class="num">$ ${fmt(montoOp,0)}</td><td class="num down">$ ${fmt(comOp,0)}</td><td class="muted">${o.origen}</td>
      <td><button class="btn sm danger" onclick="borrarOp('${o.id}')">×</button></td></tr>`;}).join('')
-   ||'<tr><td colspan="9" class="muted" style="font-family:var(--f-body)">Sin operaciones.</td></tr>';
+   ||'<tr><td colspan="10" class="muted" style="font-family:var(--f-body)">Sin operaciones.</td></tr>';
 
   /* composición por clase */
   const porClase={};
@@ -850,22 +928,83 @@ function renderPortfolio(){
     options:{scales:{x:{ticks:{color:'#8FA0BC',font:{size:10}},grid:{color:'#1E2C45'}},y:{ticks:{color:'#8FA0BC'},grid:{color:'#1E2C45'}}},
       plugins:{legend:{labels:{color:'#8FA0BC',font:{family:'IBM Plex Mono',size:11}}}}}});
 
-  /* evolución */
-  chart('#ch-evo',{type:'line',data:{labels:S.snapshots.map(s=>s.d),
-    datasets:[{label:'Patrimonio US$ MEP',data:S.snapshots.map(s=>s.usd),borderColor:'#E9B44C',backgroundColor:'rgba(233,180,76,.12)',fill:true,tension:.3,pointRadius:2}]},
-    options:{scales:{x:{ticks:{color:'#8FA0BC',font:{size:10}},grid:{color:'#1E2C45'}},y:{ticks:{color:'#8FA0BC'},grid:{color:'#1E2C45'}}},
-      plugins:{legend:{labels:{color:'#8FA0BC',font:{family:'IBM Plex Mono',size:11}}}}}});
+  /* evolución por titular */
+  const mkDs=(lbl,key,color)=>({label:lbl,data:S.snapshots.map(s=>s[key]??null),borderColor:color,
+    backgroundColor:color+'1E',fill:true,tension:.35,pointRadius:2,pointHoverRadius:5,borderWidth:2.5});
+  const dsEvo=[];
+  if(!filtroTit){
+    dsEvo.push(mkDs('Ambos','usd','#E9B44C'),mkDs('Mateo','usdM','#5BA8FF'),mkDs('Agustín','usdA','#33D17A'));
+  }else if(filtroTit==='Mateo'){ dsEvo.push(mkDs('Mateo','usdM','#5BA8FF')); }
+  else{ dsEvo.push(mkDs('Agustín','usdA','#33D17A')); }
+  chart('#ch-evo',{type:'line',data:{labels:S.snapshots.map(s=>s.d),datasets:dsEvo},
+    options:{interaction:{mode:'index',intersect:false},
+      scales:{x:{ticks:{color:'#8FA0BC',font:{size:10}},grid:{color:'#1E2C45'}},y:{ticks:{color:'#8FA0BC'},grid:{color:'#1E2C45'}}},
+      plugins:{legend:{labels:{color:'#8FA0BC',font:{family:'IBM Plex Mono',size:11},usePointStyle:true,pointStyle:'circle'}},
+        tooltip:{backgroundColor:'#111B2E',borderColor:'#1E2C45',borderWidth:1,titleFont:{family:'IBM Plex Mono'},bodyFont:{family:'IBM Plex Mono'}}}}});
 }
 function borrarOp(id){ S.ops=S.ops.filter(o=>String(o.id)!==String(id)); save(); renderAll(); }
+
+/* ============================ REPARTO ENTRE MELLIZOS ============================ */
+function modalReparto(t){
+  const pos=posiciones()[t]; if(!pos) return;
+  const a=A(t), pT=posTit()[t]||{}, m=mep(), pr=px(t);
+  const cantM=pT['Mateo']?.cant||0, cantA=pT['Agustín']?.cant||0;
+  const ppc=pos.costo/pos.cant;
+  const d=$('#ficha');
+  d.innerHTML=`<button class="close" onclick="this.closest('dialog').close()">×</button>
+    <span class="pill ${a.c}">${CLASES[a.c].n}</span>
+    <h3 style="margin-top:8px">Repartir ${t} · ${a.n}</h3>
+    <p class="muted" style="margin:10px 0 6px;font-size:.88rem">Total: <strong>${fmt(pos.cant,4)}</strong> unidades · PPC $ ${fmt(ppc)}. Asigná cuántas le corresponden a cada uno; la suma debe dar el total.</p>
+    <div class="formgrid" style="margin-top:12px">
+      <div class="field"><label>Mateo</label><input type="number" id="r-mateo" min="0" max="${pos.cant}" step="any" value="${cantM||pos.cant/2}"></div>
+      <div class="field"><label>Agustín</label><input type="number" id="r-agus" min="0" max="${pos.cant}" step="any" value="${cantA||pos.cant/2}"></div>
+    </div>
+    <div id="r-preview" style="margin-top:12px;font-size:.85rem"></div>
+    <div style="display:flex;gap:8px;margin-top:14px">
+      <button class="btn primary" id="r-confirm" style="flex:1">Confirmar reparto</button>
+      <button class="btn" id="r-mitad" style="flex:0 0 auto">50/50</button>
+    </div>
+    <p class="muted" style="margin-top:10px;font-size:.75rem">El reparto reescribe las operaciones de ${t} como dos compras (una por titular) manteniendo el PPC y la fecha original. El historial detallado previo de este activo se consolida.</p>`;
+  d.showModal();
+  const upd=()=>{
+    const cm=parseFloat($('#r-mateo').value)||0, ca=parseFloat($('#r-agus').value)||0;
+    const suma=cm+ca, ok=Math.abs(suma-pos.cant)<0.0001;
+    const vM=pr?cm*pr:null, vA=pr?ca*pr:null;
+    $('#r-preview').innerHTML=`<div class="card" style="padding:12px;border-color:${ok?'var(--line)':'var(--down)'}">
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;font-size:.82rem">
+        <div><span class="k-lbl">Mateo</span><div class="mono">${fmt(cm,4)} un.${vM!=null?' · $ '+fmt(vM,0):''}${vM!=null&&m?' · US$ '+fmt(vM/m):''}</div></div>
+        <div><span class="k-lbl">Agustín</span><div class="mono">${fmt(ca,4)} un.${vA!=null?' · $ '+fmt(vA,0):''}${vA!=null&&m?' · US$ '+fmt(vA/m):''}</div></div>
+      </div>
+      <div class="mono ${ok?'up':'down'}" style="margin-top:8px;font-size:.78rem">Suma: ${fmt(suma,4)} / ${fmt(pos.cant,4)} ${ok?'✓':'✗ debe coincidir con el total'}</div>
+    </div>`;
+    $('#r-confirm').disabled=!ok;
+    $('#r-confirm').style.opacity=ok?1:.45;
+    return ok;
+  };
+  $('#r-mateo').oninput=()=>{ const cm=parseFloat($('#r-mateo').value)||0; $('#r-agus').value=Math.max(0,+(pos.cant-cm).toFixed(6)); upd(); };
+  $('#r-agus').oninput=()=>{ const ca=parseFloat($('#r-agus').value)||0; $('#r-mateo').value=Math.max(0,+(pos.cant-ca).toFixed(6)); upd(); };
+  $('#r-mitad').onclick=()=>{ $('#r-mateo').value=+(pos.cant/2).toFixed(6); $('#r-agus').value=+(pos.cant/2).toFixed(6); upd(); };
+  upd();
+  $('#r-confirm').onclick=()=>{
+    if(!upd()) return;
+    const cm=parseFloat($('#r-mateo').value)||0, ca=parseFloat($('#r-agus').value)||0;
+    const fechaOrig=S.ops.filter(o=>o.t===t).map(o=>o.fecha).sort()[0]||hoy();
+    S.ops=S.ops.filter(o=>o.t!==t);
+    if(cm>0) S.ops.push({id:Date.now()+Math.random(),tipo:'compra',t,cant:cm,precio:ppc,fecha:fechaOrig,origen:'reparto',titular:'Mateo'});
+    if(ca>0) S.ops.push({id:Date.now()+Math.random(),tipo:'compra',t,cant:ca,precio:ppc,fecha:fechaOrig,origen:'reparto',titular:'Agustín'});
+    save(); renderAll(); d.close();
+    toast(`${t} repartido: Mateo ${fmt(cm,2)} · Agustín ${fmt(ca,2)}`);
+  };
+}
 
 /* ============================ COMISIONES IOL ============================ */
 const COMISION_IOL=0.006; /* 0.6% */
 const IVA=0.21;
 const COM_TOTAL=COMISION_IOL*(1+IVA); /* 0.726% */
 function comision(monto){ return monto*COM_TOTAL; }
-function calcComisiones(){
+function calcComisiones(ops){
   let ars=0;
-  S.ops.forEach(o=>{ ars+=comision(o.cant*o.precio); });
+  (ops||S.ops).forEach(o=>{ ars+=comision(o.cant*o.precio); });
   return {ars};
 }
 
@@ -883,38 +1022,49 @@ function borrarPosicion(t){
 function modalVenta(t,cantMax){
   const a=A(t), pr=px(t), m=mep(), d=$('#ficha');
   const valUnit=pr||0;
+  const pT=posTit()[t]||{};
+  const maxDe=k=>pT[k]?.cant||0;
   d.innerHTML=`<button class="close" onclick="this.closest('dialog').close()">×</button>
     <span class="pill ${a.c}">${CLASES[a.c].n}</span>
     <h3 style="margin-top:8px">Vender ${t} · ${a.n}</h3>
-    <p class="muted" style="margin:10px 0 6px;font-size:.88rem">Tenés <strong>${fmt(cantMax,4)}</strong> unidades · Último: $ ${fmt(valUnit)} ARS${m?' · US$ '+fmt(valUnit/m)+' MEP':''}</p>
+    <p class="muted" style="margin:10px 0 6px;font-size:.88rem">Mateo: <strong>${fmt(maxDe('Mateo'),2)}</strong> · Agustín: <strong>${fmt(maxDe('Agustín'),2)}</strong>${maxDe('sin')>0?' · Sin asignar: '+fmt(maxDe('sin'),2):''} · Último: $ ${fmt(valUnit)}${m?' · US$ '+fmt(valUnit/m)+' MEP':''}</p>
     <div class="formgrid" style="margin-top:12px">
-      <div class="field"><label>Cantidad a vender</label><input type="number" id="v-cant" min="0" max="${cantMax}" step="any" value="${cantMax}" placeholder="cantidad"></div>
+      <div class="field"><label>Titular que vende</label><select id="v-titular">
+        <option value="Mateo">Mateo (${fmt(maxDe('Mateo'),2)})</option>
+        <option value="Agustín">Agustín (${fmt(maxDe('Agustín'),2)})</option>
+        ${maxDe('sin')>0?`<option value="">Sin asignar (${fmt(maxDe('sin'),2)})</option>`:''}
+      </select></div>
+      <div class="field"><label>Cantidad a vender</label><input type="number" id="v-cant" min="0" step="any" value="${maxDe('Mateo')||cantMax}" placeholder="cantidad"></div>
       <div class="field"><label>Precio venta ARS</label><input type="number" id="v-precio" min="0" step="any" value="${valUnit||''}" placeholder="último si vacío"></div>
       <div class="field"><label>Fecha</label><input type="date" id="v-fecha" value="${hoy()}"></div>
     </div>
     <div id="v-preview" style="margin-top:12px;font-size:.85rem"></div>
     <div style="display:flex;gap:8px;margin-top:14px">
       <button class="btn primary" id="v-confirm" style="flex:1">Confirmar venta</button>
-      <button class="btn" onclick="document.getElementById('v-cant').value=${cantMax};updVentaPreview('${t}',${cantMax})" style="flex:0 0 auto">Vender todo</button>
+      <button class="btn" id="v-todo" style="flex:0 0 auto">Vender todo lo del titular</button>
     </div>`;
   d.showModal();
-  const updPreview=()=>updVentaPreview(t,cantMax);
+  const titSel=()=>$('#v-titular').value||null;
+  const titMax=()=>{ const k=titSel(); return k?maxDe(k):maxDe('sin'); };
+  const updPreview=()=>updVentaPreview(t,titMax());
   $('#v-cant').oninput=updPreview;
   $('#v-precio').oninput=updPreview;
+  $('#v-titular').onchange=()=>{ $('#v-cant').value=titMax(); updPreview(); };
+  $('#v-todo').onclick=()=>{ $('#v-cant').value=titMax(); updPreview(); };
   updPreview();
   $('#v-confirm').onclick=()=>{
     const cant=parseFloat($('#v-cant').value);
     let precio=parseFloat($('#v-precio').value); if(!precio) precio=pr;
-    const fecha=$('#v-fecha').value;
+    const fecha=$('#v-fecha').value, tit=titSel();
     if(!cant||cant<=0){toast('Ingresá una cantidad');return;}
-    if(cant>cantMax+0.0001){toast('No podés vender más de lo que tenés');return;}
+    if(cant>titMax()+0.0001){toast((tit||'Sin asignar')+' no tiene esa cantidad para vender');return;}
     if(!precio||precio<=0){toast('Necesitás un precio de venta');return;}
-    /* registrar la venta */
     const montoTotal=cant*precio;
     const com=comision(montoTotal);
-    registrarOp('venta',t,cant,precio,fecha,'manual');
-    d.close();
-    toast(`Venta de ${fmt(cant,4)} ${t} · Bruto $ ${fmt(montoTotal,0)} · Comisión IOL $ ${fmt(com,0)}`);
+    if(registrarOp('venta',t,cant,precio,fecha,'manual',tit)){
+      d.close();
+      toast(`Venta ${tit?'de '+tit:''}: ${fmt(cant,4)} ${t} · Bruto $ ${fmt(montoTotal,0)} · Comisión $ ${fmt(com,0)}`);
+    }
   };
 }
 function updVentaPreview(t,cantMax){
@@ -1031,13 +1181,18 @@ document.addEventListener('DOMContentLoaded',()=>{
     b.classList.add('active'); $('#tab-'+b.dataset.tab).classList.add('active');
   });
   selectActivos();
+  $('#seg-tit').querySelectorAll('button').forEach(b=>b.onclick=()=>{
+    $('#seg-tit').querySelectorAll('button').forEach(x=>x.classList.remove('active'));
+    b.classList.add('active'); filtroTit=b.dataset.t; renderPortfolio();
+  });
   $('#op-fecha').value=hoy(); $('#pl-inicio').value=hoy();
   $('#buscador').oninput=renderExplorar; $('#filtro-clase').onchange=renderExplorar;
   $('#btn-precios').onclick=fetchPrecios;
   $('#btn-op').onclick=()=>{
     const t=$('#op-activo').value, cant=parseFloat($('#op-cant').value);
     let precio=parseFloat($('#op-precio').value); if(!precio) precio=px(t);
-    if(registrarOp($('#op-tipo').value,t,cant,precio,$('#op-fecha').value)){ $('#op-cant').value=''; $('#op-precio').value=''; toast('Operación registrada'); }
+    const tit=$('#op-titular').value;
+    if(registrarOp($('#op-tipo').value,t,cant,precio,$('#op-fecha').value,'manual',tit)){ $('#op-cant').value=''; $('#op-precio').value=''; toast('Operación de '+tit+' registrada'); }
   };
   ['op-activo','op-cant','op-precio','op-tipo'].forEach(id=>$('#'+id).oninput=$('#'+id).onchange=()=>{
     const t=$('#op-activo').value, c=parseFloat($('#op-cant').value)||0, pr=parseFloat($('#op-precio').value)||px(t)||0;
@@ -1047,7 +1202,7 @@ document.addEventListener('DOMContentLoaded',()=>{
   $('#btn-plan').onclick=()=>{
     const monto=parseFloat($('#pl-monto').value);
     if(!monto||monto<=0){toast('Ingresá un monto válido');return;}
-    S.planes.push({t:$('#pl-activo').value,monto,frec:$('#pl-frec').value,proxima:$('#pl-inicio').value||hoy(),ejecutadas:0});
+    S.planes.push({t:$('#pl-activo').value,monto,frec:$('#pl-frec').value,proxima:$('#pl-inicio').value||hoy(),ejecutadas:0,titular:$('#pl-titular').value});
     save(); ejecutarPlanes(); renderAll(); toast('Plan creado');
   };
   $('#btn-quiz').onclick=calcularPerfil;
