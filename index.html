@@ -828,10 +828,25 @@ function renderExplorar(){
   });
 }
 const RIESGO_LBL={1:'Muy bajo',2:'Bajo',3:'Moderado',4:'Alto',5:'Muy alto'};
+function descGenerica(a){
+  if(a.c==='cedear'){
+    const esETF=/ETF|Trust|Select Sector|iShares|SPDR|Vanguard|VanEck|Global X|Direxion|ProShares/i.test(a.n);
+    return esETF
+      ? 'Fondo cotizado (ETF) que agrupa muchos activos en uno solo: da exposición diversificada a un sector, índice o región sin elegir empresa por empresa.'
+      : 'Certificado que representa acciones de esta empresa extranjera cotizando en la Bolsa argentina, ajustado al tipo de cambio implícito (CCL).';
+  }
+  if(a.c==='accion') return 'Acción de una empresa argentina que cotiza en la Bolsa de Buenos Aires (BYMA).';
+  if(a.c==='bono') return 'Título de deuda soberana argentina en dólares: paga renta y capital según su cronograma de vencimientos.';
+  if(a.c==='letra') return 'Instrumento de renta fija en pesos emitido por el Tesoro argentino, a tasa fija o ajustado por inflación (CER).';
+  if(a.c==='fci') return 'Fondo Común de Inversión: una cartera de varios activos administrada profesionalmente, con cuotapartes que suben o bajan según su rendimiento.';
+  if(a.c==='cripto') return 'Criptomoneda valuada en dólares y convertida a pesos al tipo de cambio MEP del momento.';
+  if(a.c==='mm') return 'Fondo de money market: liquidez inmediata remunerada, similar a una caja de ahorro que paga interés todos los días.';
+  return 'Instrumento operable desde InvertirOnline.';
+}
 function mostrarTT(t,ev){
   const a=A(t); if(!a) return;
   const el=$('#tt');
-  el.innerHTML=`<div class="tt-t">${a.t} · ${CLASES[a.c].n}</div><div class="tt-d">${a.d}</div><div class="tt-r">Riesgo: ${'●'.repeat(a.r)}${'○'.repeat(5-a.r)} ${RIESGO_LBL[a.r]}</div>`;
+  el.innerHTML=`<div class="tt-t">${a.t} · ${CLASES[a.c].n}</div><div class="tt-d">${a.d||descGenerica(a)}</div><div class="tt-r">Riesgo: ${'●'.repeat(a.r)}${'○'.repeat(5-a.r)} ${RIESGO_LBL[a.r]}</div>`;
   posicionarTT(ev);
   el.classList.add('show');
 }
@@ -849,7 +864,7 @@ function ficha(t){
   d.innerHTML=`<button class="close" onclick="this.closest('dialog').close()">×</button>
     <span class="pill ${a.c}">${CLASES[a.c].n}</span>
     <h3 style="margin-top:8px">${a.t} · ${a.n}</h3>
-    <p class="muted" style="margin:10px 0 14px;font-size:.9rem">${a.d}</p>
+    <p class="muted" style="margin:10px 0 14px;font-size:.9rem">${a.d||descGenerica(a)}</p>
     <div class="formgrid">
       <div class="field"><label>Último precio ARS</label><input type="number" id="f-precio" step="any" value="${px(t)??''}"></div>
       <div class="field"><button class="btn primary" style="width:100%" id="f-save">Guardar precio</button></div>
