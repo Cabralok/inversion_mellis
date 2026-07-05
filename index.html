@@ -740,6 +740,11 @@ const $=q=>document.querySelector(q);
 const fmt=(n,d=2)=>n==null||isNaN(n)?'—':n.toLocaleString('es-AR',{minimumFractionDigits:d,maximumFractionDigits:d});
 const hoy=()=>new Date().toISOString().slice(0,10);
 function toast(m){const t=$('#toast');t.textContent=m;t.style.display='block';setTimeout(()=>t.style.display='none',3000);}
+function requireAdmin(){
+  if(isAdmin) return true;
+  toast('Solo Rodo puede editar. Vos podés mirar todo, pero no cambiar nada 👀');
+  return false;
+}
 const A=t=>ASSETS.find(a=>a.t===t);
 const px=t=>S.prices[t]??null;
 const mep=()=>S.dolares.MEP??null;
@@ -828,6 +833,7 @@ function selectActivos(){
   $('#op-activo').innerHTML=opts; $('#pl-activo').innerHTML=opts;
 }
 function registrarOp(tipo,t,cant,precio,fecha,origen,titular){
+  if(!requireAdmin()) return false;
   if(!cant||cant<=0||!precio||precio<=0){toast('Cantidad y precio deben ser mayores a cero');return false;}
   if(tipo==='venta'){
     if(titular){
@@ -893,7 +899,7 @@ function renderPlanes(){
      <td><button class="btn sm danger" onclick="borrarPlan(${i})">Eliminar</button></td></tr>`).join('')
    ||'<tr><td colspan="7" class="muted" style="font-family:var(--f-body)">Sin planes activos. Creá el primero arriba.</td></tr>';
 }
-function borrarPlan(i){ S.planes.splice(i,1); save(); renderPlanes(); }
+function borrarPlan(i){ if(!requireAdmin())return; S.planes.splice(i,1); save(); renderPlanes(); }
 
 /* ============================ SNAPSHOTS ============================ */
 function snapshot(){
@@ -1023,10 +1029,11 @@ function renderPortfolio(){
       plugins:{legend:{labels:{color:'#8FA0BC',font:{family:'IBM Plex Mono',size:11},usePointStyle:true,pointStyle:'circle'}},
         tooltip:{backgroundColor:'#111B2E',borderColor:'#1E2C45',borderWidth:1,titleFont:{family:'IBM Plex Mono'},bodyFont:{family:'IBM Plex Mono'}}}}});
 }
-function borrarOp(id){ S.ops=S.ops.filter(o=>String(o.id)!==String(id)); save(); renderAll(); }
+function borrarOp(id){ if(!requireAdmin())return; S.ops=S.ops.filter(o=>String(o.id)!==String(id)); save(); renderAll(); }
 
 /* ============================ REPARTO ENTRE MELLIZOS ============================ */
 function modalReparto(t){
+  if(!requireAdmin()) return;
   const pos=posiciones()[t]; if(!pos) return;
   const a=A(t), pT=posTit()[t]||{}, m=mep(), pr=px(t);
   const cantM=pT['Mateo']?.cant||0, cantA=pT['Agustín']?.cant||0;
@@ -1100,6 +1107,7 @@ function calcComisiones(ops){
 
 /* ============================ LIMPIAR DUPLICADOS SIN TITULAR ============================ */
 function limpiarSinAsignar(){
+  if(!requireAdmin()) return;
   const sinOps=S.ops.filter(o=>!o.titular);
   if(!sinOps.length){ toast('No hay operaciones sin titular'); return; }
   const montoAprox=sinOps.reduce((a,o)=>a+o.cant*o.precio,0);
@@ -1111,6 +1119,7 @@ function limpiarSinAsignar(){
 
 /* ============================ BORRAR POSICIÓN ============================ */
 function borrarPosicion(t){
+  if(!requireAdmin()) return;
   const pos=posiciones()[t];
   if(!pos) return;
   if(!confirm(`¿Borrar TODA la posición de ${t}? Se eliminan todas las operaciones (${S.ops.filter(o=>o.t===t).length} registros).`)) return;
@@ -1121,6 +1130,7 @@ function borrarPosicion(t){
 
 /* ============================ MODAL VENTA PARCIAL ============================ */
 function modalVenta(t,cantMax){
+  if(!requireAdmin()) return;
   const a=A(t), pr=px(t), m=mep(), d=$('#ficha');
   const valUnit=pr||0;
   const pT=posTit()[t]||{};
@@ -1301,6 +1311,7 @@ document.addEventListener('DOMContentLoaded',()=>{
     $('#op-preview').textContent=c&&pr?`Total: $ ${fmt(total,0)} ARS · Comisión IOL: $ ${fmt(cm,0)} (0,726%) · Neto: $ ${fmt(total+($('#op-tipo').value==='compra'?cm:-cm),0)}${mep()?' · US$ '+fmt(total/mep()):''}`:'';
   });
   $('#btn-plan').onclick=()=>{
+    if(!requireAdmin()) return;
     const monto=parseFloat($('#pl-monto').value);
     if(!monto||monto<=0){toast('Ingresá un monto válido');return;}
     S.planes.push({t:$('#pl-activo').value,monto,frec:$('#pl-frec').value,proxima:$('#pl-inicio').value||hoy(),ejecutadas:0,titular:$('#pl-titular').value});
