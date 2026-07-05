@@ -129,11 +129,23 @@ footer{border-top:1px solid var(--line);padding:20px 22px;color:var(--muted);fon
 .seg button:hover:not(.active){color:var(--text)}
 .seg button[data-t="Mateo"].active{background:#5BA8FF;box-shadow:0 2px 8px rgba(91,168,255,.3)}
 .seg button[data-t="Agustín"].active{background:#33D17A;box-shadow:0 2px 8px rgba(51,209,122,.3)}
+
+/* ---------- Sync widget (Firebase) ---------- */
+.sync{position:absolute;top:20px;right:22px;display:flex;align-items:center;gap:10px;font-family:var(--f-mono);font-size:.75rem}
+.sync .dot{width:8px;height:8px;border-radius:50%;background:var(--muted);transition:background .3s,box-shadow .3s}
+.sync.on .dot{background:var(--up);box-shadow:0 0 8px rgba(51,209,122,.6)}
+.sync.err .dot{background:var(--down)}
+.sync .lbl{color:var(--muted);white-space:nowrap}
+.sync button{background:var(--panel2);border:1px solid var(--line);color:var(--text);padding:6px 12px;border-radius:99px;font-size:.75rem;cursor:pointer;font-family:var(--f-body);font-weight:500}
+.sync button:hover{border-color:var(--gold-dim)}
+.sync .who{color:var(--gold);font-weight:600}
+@media(max-width:720px){.sync{position:static;justify-content:flex-end;padding:8px 22px 0;top:0;right:0}}
 </style>
 </head>
 <body>
 
-<header>
+<header style="position:relative">
+  <div class="sync" id="sync"><span class="dot"></span><span class="lbl" id="sync-lbl">Conectando…</span><button id="btn-login">Iniciar sesión</button></div>
   <div class="brand">
     <h1>INVERTÍ <span>CON CLAUDE</span></h1>
     <div class="sub">Dashboard educativo · Mercado argentino · Pensado para operar en InvertirOnline</div>
@@ -271,7 +283,29 @@ footer{border-top:1px solid var(--line);padding:20px 22px;color:var(--muted);fon
   <strong>Aviso:</strong> herramienta educativa y de seguimiento. No ejecuta órdenes reales, no se conecta a tu cuenta de IOL y nada de lo que muestra constituye recomendación de inversión. Precios de fuentes públicas de terceros, pueden tener demora. Las comisiones se estiman al 0,726% (0,6% + IVA 21%), tarifa de IOL para CEDEARs; otros instrumentos pueden variar. Construido con Claude.
 </footer>
 
-<script>
+<script type="module">
+/* ============================ FIREBASE ============================ */
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-app.js";
+import { getAuth, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged }
+  from "https://www.gstatic.com/firebasejs/10.13.0/firebase-auth.js";
+import { getFirestore, doc, setDoc, onSnapshot, serverTimestamp }
+  from "https://www.gstatic.com/firebasejs/10.13.0/firebase-firestore.js";
+
+const firebaseConfig = {
+  apiKey: "AIzaSyDItyZIIhQNSSRG14nateHQE0O5kRM60oE",
+  authDomain: "inversion-mellis.firebaseapp.com",
+  projectId: "inversion-mellis",
+  storageBucket: "inversion-mellis.firebasestorage.app",
+  messagingSenderId: "639114087262",
+  appId: "1:639114087262:web:95079e12b5918fe05fddcf"
+};
+const ADMIN_EMAIL='rodocabral@gmail.com';
+const fbApp=initializeApp(firebaseConfig);
+const fbAuth=getAuth(fbApp);
+const fbDb=getFirestore(fbApp);
+const fbDoc=doc(fbDb,'portfolio','main');
+let currentUser=null, isAdmin=false, remoteSyncing=false, unsubSnap=null;
+
 /* ============================================================
    INVERTÍ CON CLAUDE · versión IOL Argentina
    Datos: universo curado de activos operables en IOL
@@ -650,11 +684,54 @@ const ASSETS = [
 const KEY='iol_dashboard_v1';
 let S = load();
 function load(){
-  const def={ops:[],planes:[],prices:{},vars:{},dolares:{},perfil:null,snapshots:[]};
+  const def={ops:[],planes:[],prices:{},vars:{},dolares:{},perfil:null,snapshots:[],lastModified:0};
   try{ const s=JSON.parse(localStorage.getItem(KEY)); if(s) return Object.assign(def,s); }catch(e){}
   return def;
 }
-function save(){ localStorage.setItem(KEY,JSON.stringify(S)); }
+let saveTimer=null;
+function save(){
+  S.lastModified=Date.now();
+  localStorage.setItem(KEY,JSON.stringify(S));
+  /* subir a Firestore con debounce, solo si soy admin y no estoy aplicando datos remotos */
+  if(!isAdmin||remoteSyncing) return;
+  clearTimeout(saveTimer);
+  saveTimer=setTimeout(pushToFirestore,600);
+}
+async function pushToFirestore(){
+  try{
+    await setDoc(fbDoc,{data:JSON.stringify(S),lastModified:S.lastModified,updatedAt:serverTimestamp()});
+    syncUI('on','Sincronizado · '+new Date().toLocaleTimeString('es-AR').slice(0,5));
+  }catch(e){ console.warn('push error',e); syncUI('err','Error al guardar en la nube'); }
+}
+function mergeRemote(remoteData,remoteLM){
+  /* combinar por lastModified: gana el más reciente */
+  if(!remoteData) return false;
+  const local=S.lastModified||0;
+  if(remoteLM>local){
+    remoteSyncing=true;
+    S=Object.assign({ops:[],planes:[],prices:{},vars:{},dolares:{},perfil:null,snapshots:[],lastModified:0},remoteData);
+    S.lastModified=remoteLM;
+    localStorage.setItem(KEY,JSON.stringify(S));
+    remoteSyncing=false;
+    return true;
+  }
+  return false;
+}
+function syncUI(state,text){
+  const el=$('#sync'); if(!el) return;
+  el.classList.remove('on','err');
+  if(state) el.classList.add(state);
+  $('#sync-lbl').textContent=text||'';
+  const btn=$('#btn-login');
+  if(!btn) return;
+  if(currentUser){
+    btn.textContent=isAdmin?'Salir ('+currentUser.email.split('@')[0]+')':'Salir';
+    btn.title=currentUser.email;
+  }else{
+    btn.textContent='Iniciar sesión';
+    btn.title='Iniciá sesión para editar';
+  }
+}
 const $=q=>document.querySelector(q);
 const fmt=(n,d=2)=>n==null||isNaN(n)?'—':n.toLocaleString('es-AR',{minimumFractionDigits:d,maximumFractionDigits:d});
 const hoy=()=>new Date().toISOString().slice(0,10);
@@ -1211,6 +1288,52 @@ document.addEventListener('DOMContentLoaded',()=>{
   $('#btn-reset').onclick=()=>{ if(confirm('¿Borrar TODAS las operaciones, planes y perfil? No hay vuelta atrás sin respaldo.')){ localStorage.removeItem(KEY); S=load(); renderAll(); } };
   renderQuiz(); renderTape(); renderAll();
   fetchDolares().then(()=>{ fetchPrecios().then(()=>ejecutarPlanes()); });
+
+  /* ============================ FIREBASE INIT ============================ */
+  syncUI('','Conectando…');
+  /* botón de login/salida */
+  $('#btn-login').onclick=async()=>{
+    if(currentUser){
+      await signOut(fbAuth);
+    }else{
+      try{ await signInWithPopup(fbAuth,new GoogleAuthProvider()); }
+      catch(e){ toast('No se pudo iniciar sesión: '+(e.message||e)); }
+    }
+  };
+  /* auth state */
+  onAuthStateChanged(fbAuth,user=>{
+    currentUser=user||null;
+    isAdmin=!!(user&&user.email===ADMIN_EMAIL);
+    if(user){
+      syncUI('on',isAdmin?'Editando como '+user.email.split('@')[0]:'Sesión iniciada · solo lectura');
+      if(isAdmin&&S.lastModified){
+        /* si soy admin y tengo datos locales más nuevos, sincronizar */
+        pushToFirestore();
+      }
+    }else{
+      syncUI('on','Conectado · solo lectura');
+    }
+  });
+  /* escuchar cambios remotos en tiempo real (todos, sin login) */
+  unsubSnap=onSnapshot(fbDoc,snap=>{
+    if(!snap.exists()){
+      /* documento vacío: si soy admin, subir mis datos locales */
+      if(isAdmin&&(S.ops.length||S.planes.length)) pushToFirestore();
+      return;
+    }
+    const d=snap.data();
+    let rd=null;
+    try{ rd=JSON.parse(d.data); }catch(e){ return; }
+    const rLM=d.lastModified||0;
+    const changed=mergeRemote(rd,rLM);
+    if(changed){
+      renderTape(); renderAll();
+      if(!isAdmin) syncUI('on','Actualizado · '+new Date().toLocaleTimeString('es-AR').slice(0,5));
+    }
+  },err=>{
+    console.warn('snapshot error',err);
+    syncUI('err','Sin conexión con la nube');
+  });
 });
 </script>
 </body>
