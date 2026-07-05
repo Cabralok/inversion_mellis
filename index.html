@@ -953,7 +953,7 @@ function renderPortfolio(){
   $('#kpis').innerHTML+=`
     <div class="card" style="border-left:3px solid #5BA8FF"><div class="k-lbl">Cartera de Mateo</div><div class="k-val">$ ${fmt(totTit['Mateo'],0)}</div><div class="k-sub">${m?'US$ '+fmt(totTit['Mateo']/m)+' MEP':''}</div></div>
     <div class="card" style="border-left:3px solid #33D17A"><div class="k-lbl">Cartera de Agustín</div><div class="k-val">$ ${fmt(totTit['Agustín'],0)}</div><div class="k-sub">${m?'US$ '+fmt(totTit['Agustín']/m)+' MEP':''}</div></div>
-    ${totTit['sin']>0.01?`<div class="card" style="border-color:var(--gold-dim)"><div class="k-lbl">⚠ Sin asignar</div><div class="k-val">$ ${fmt(totTit['sin'],0)}</div><div class="k-sub">Usá "Repartir" en cada posición</div></div>`:''}`;
+    ${totTit['sin']>0.01?`<div class="card" style="border-color:var(--gold-dim)"><div class="k-lbl">⚠ Sin asignar (duplicado)</div><div class="k-val">$ ${fmt(totTit['sin'],0)}</div><div class="k-sub" style="margin-bottom:8px">Operaciones sin titular, probablemente duplicadas</div><button class="btn sm danger" onclick="limpiarSinAsignar()">Limpiar duplicados</button></div>`:''}`;
   }
 
   $('#tbl-pos tbody').innerHTML=Object.entries(pos).map(([t,p])=>{
@@ -1083,6 +1083,17 @@ function calcComisiones(ops){
   let ars=0;
   (ops||S.ops).forEach(o=>{ ars+=comision(o.cant*o.precio); });
   return {ars};
+}
+
+/* ============================ LIMPIAR DUPLICADOS SIN TITULAR ============================ */
+function limpiarSinAsignar(){
+  const sinOps=S.ops.filter(o=>!o.titular);
+  if(!sinOps.length){ toast('No hay operaciones sin titular'); return; }
+  const montoAprox=sinOps.reduce((a,o)=>a+o.cant*o.precio,0);
+  if(!confirm(`Se van a borrar ${sinOps.length} operación(es) sin titular por un total aproximado de $ ${fmt(montoAprox,0)} ARS.\n\nEsto NO afecta lo ya asignado a Mateo ni a Agustín. Usalo solo si confirmaste que ese monto es un duplicado.\n\n¿Confirmar?`)) return;
+  S.ops=S.ops.filter(o=>o.titular);
+  save(); snapshot(); renderAll();
+  toast('Operaciones sin titular eliminadas');
 }
 
 /* ============================ BORRAR POSICIÓN ============================ */
