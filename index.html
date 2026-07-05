@@ -150,7 +150,7 @@ footer{border-top:1px solid var(--line);padding:20px 22px;color:var(--muted);fon
   <p class="desc">Tus posiciones valuadas a último precio, en pesos y en dólar MEP. Todo se guarda en este navegador.</p>
   <div class="grid kpis" id="kpis"></div>
   <div class="tblwrap"><table id="tbl-pos">
-    <thead><tr><th>Activo</th><th>Clase</th><th class="num">Cantidad</th><th class="num">PPC</th><th class="num">Último</th><th class="num">Valor ARS</th><th class="num">Valor USD</th><th class="num">P/L ARS</th><th class="num">P/L %</th></tr></thead>
+    <thead><tr><th>Activo</th><th>Clase</th><th class="num">Cantidad</th><th class="num">PPC</th><th class="num">Último</th><th class="num">Valor ARS</th><th class="num">Valor USD</th><th class="num">P/L ARS</th><th class="num">P/L %</th><th>Acciones</th></tr></thead>
     <tbody></tbody>
   </table></div>
   <div class="charts2">
@@ -160,7 +160,7 @@ footer{border-top:1px solid var(--line);padding:20px 22px;color:var(--muted);fon
   <div class="chartbox" style="margin-top:14px"><h4>Evolución patrimonial (USD MEP)</h4><canvas id="ch-evo"></canvas></div>
   <h2 style="margin-top:26px">Historial de operaciones</h2>
   <div class="tblwrap"><table id="tbl-ops">
-    <thead><tr><th>Fecha</th><th>Tipo</th><th>Activo</th><th class="num">Cantidad</th><th class="num">Precio</th><th class="num">Total ARS</th><th>Origen</th><th></th></tr></thead>
+    <thead><tr><th>Fecha</th><th>Tipo</th><th>Activo</th><th class="num">Cantidad</th><th class="num">Precio</th><th class="num">Total ARS</th><th class="num">Comisión</th><th>Origen</th><th></th></tr></thead>
     <tbody></tbody>
   </table></div>
 </section>
@@ -253,7 +253,7 @@ footer{border-top:1px solid var(--line);padding:20px 22px;color:var(--muted);fon
 <div class="toast" id="toast"></div>
 
 <footer>
-  <strong>Aviso:</strong> herramienta educativa y de seguimiento. No ejecuta órdenes reales, no se conecta a tu cuenta de IOL y nada de lo que muestra constituye recomendación de inversión. Precios de fuentes públicas de terceros, pueden tener demora. Construido con Claude.
+  <strong>Aviso:</strong> herramienta educativa y de seguimiento. No ejecuta órdenes reales, no se conecta a tu cuenta de IOL y nada de lo que muestra constituye recomendación de inversión. Precios de fuentes públicas de terceros, pueden tener demora. Las comisiones se estiman al 0,726% (0,6% + IVA 21%), tarifa de IOL para CEDEARs; otros instrumentos pueden variar. Construido con Claude.
 </footer>
 
 <script>
@@ -807,6 +807,11 @@ function renderPortfolio(){
     <div class="card"><div class="k-lbl">Resultado</div><div class="k-val ${tot.pl>=0?'up':'down'}">$ ${fmt(tot.pl,0)}</div><div class="k-sub ${tot.pl>=0?'up':'down'}">${tot.costo>0?fmt(tot.pl/tot.costo*100)+'%':''}</div></div>
     <div class="card"><div class="k-lbl">Posiciones</div><div class="k-val">${Object.keys(pos).length}</div><div class="k-sub">${S.ops.length} operaciones</div></div>`;
 
+  /* comisiones acumuladas */
+  const comTotal=calcComisiones();
+  $('#kpis').innerHTML+=`
+    <div class="card"><div class="k-lbl">Comisiones IOL pagadas</div><div class="k-val down">$ ${fmt(comTotal.ars,0)}</div><div class="k-sub">${m?'US$ '+fmt(comTotal.ars/m)+' MEP':''} · ${tot.costo>0?fmt(comTotal.ars/tot.costo*100,2)+'% s/invertido':''}</div></div>`;
+
   $('#tbl-pos tbody').innerHTML=Object.entries(pos).map(([t,p])=>{
     const a=A(t),pr=px(t),ppc=p.costo/p.cant,val=pr?p.cant*pr:null,pl=val!=null?val-p.costo:null;
     return `<tr><td><strong>${t}</strong></td><td><span class="pill ${a.c}">${CLASES[a.c].n}</span></td>
@@ -814,15 +819,17 @@ function renderPortfolio(){
       <td class="num">${pr?'$ '+fmt(pr):'—'}</td><td class="num">${val!=null?'$ '+fmt(val,0):'—'}</td>
       <td class="num">${val!=null&&m?'US$ '+fmt(val/m):'—'}</td>
       <td class="num ${pl>=0?'up':'down'}">${pl!=null?'$ '+fmt(pl,0):'—'}</td>
-      <td class="num ${pl>=0?'up':'down'}">${pl!=null&&p.costo>0?fmt(pl/p.costo*100)+'%':'—'}</td></tr>`;
-  }).join('')||'<tr><td colspan="9" class="muted" style="font-family:var(--f-body)">Todavía no registraste operaciones. Arrancá en la pestaña Operar.</td></tr>';
+      <td class="num ${pl>=0?'up':'down'}">${pl!=null&&p.costo>0?fmt(pl/p.costo*100)+'%':'—'}</td>
+      <td style="white-space:nowrap"><button class="btn sm" onclick="modalVenta('${t}',${p.cant})">Vender</button> <button class="btn sm danger" onclick="borrarPosicion('${t}')">Borrar</button></td></tr>`;
+  }).join('')||'<tr><td colspan="10" class="muted" style="font-family:var(--f-body)">Todavía no registraste operaciones. Arrancá en la pestaña Operar.</td></tr>';
 
-  $('#tbl-ops tbody').innerHTML=[...S.ops].sort((a,b)=>b.fecha.localeCompare(a.fecha)).map(o=>
-    `<tr><td>${o.fecha}</td><td class="${o.tipo==='compra'?'up':'down'}">${o.tipo.toUpperCase()}</td>
+  $('#tbl-ops tbody').innerHTML=[...S.ops].sort((a,b)=>b.fecha.localeCompare(a.fecha)).map(o=>{
+    const montoOp=o.cant*o.precio, comOp=comision(montoOp);
+    return `<tr><td>${o.fecha}</td><td class="${o.tipo==='compra'?'up':'down'}">${o.tipo.toUpperCase()}</td>
      <td><strong>${o.t}</strong></td><td class="num">${fmt(o.cant,4)}</td><td class="num">$ ${fmt(o.precio)}</td>
-     <td class="num">$ ${fmt(o.cant*o.precio,0)}</td><td class="muted">${o.origen}</td>
-     <td><button class="btn sm danger" onclick="borrarOp('${o.id}')">×</button></td></tr>`).join('')
-   ||'<tr><td colspan="8" class="muted" style="font-family:var(--f-body)">Sin operaciones.</td></tr>';
+     <td class="num">$ ${fmt(montoOp,0)}</td><td class="num down">$ ${fmt(comOp,0)}</td><td class="muted">${o.origen}</td>
+     <td><button class="btn sm danger" onclick="borrarOp('${o.id}')">×</button></td></tr>`;}).join('')
+   ||'<tr><td colspan="9" class="muted" style="font-family:var(--f-body)">Sin operaciones.</td></tr>';
 
   /* composición por clase */
   const porClase={};
@@ -850,6 +857,91 @@ function renderPortfolio(){
       plugins:{legend:{labels:{color:'#8FA0BC',font:{family:'IBM Plex Mono',size:11}}}}}});
 }
 function borrarOp(id){ S.ops=S.ops.filter(o=>String(o.id)!==String(id)); save(); renderAll(); }
+
+/* ============================ COMISIONES IOL ============================ */
+const COMISION_IOL=0.006; /* 0.6% */
+const IVA=0.21;
+const COM_TOTAL=COMISION_IOL*(1+IVA); /* 0.726% */
+function comision(monto){ return monto*COM_TOTAL; }
+function calcComisiones(){
+  let ars=0;
+  S.ops.forEach(o=>{ ars+=comision(o.cant*o.precio); });
+  return {ars};
+}
+
+/* ============================ BORRAR POSICIÓN ============================ */
+function borrarPosicion(t){
+  const pos=posiciones()[t];
+  if(!pos) return;
+  if(!confirm(`¿Borrar TODA la posición de ${t}? Se eliminan todas las operaciones (${S.ops.filter(o=>o.t===t).length} registros).`)) return;
+  S.ops=S.ops.filter(o=>o.t!==t);
+  save(); snapshot(); renderAll();
+  toast('Posición '+t+' eliminada');
+}
+
+/* ============================ MODAL VENTA PARCIAL ============================ */
+function modalVenta(t,cantMax){
+  const a=A(t), pr=px(t), m=mep(), d=$('#ficha');
+  const valUnit=pr||0;
+  d.innerHTML=`<button class="close" onclick="this.closest('dialog').close()">×</button>
+    <span class="pill ${a.c}">${CLASES[a.c].n}</span>
+    <h3 style="margin-top:8px">Vender ${t} · ${a.n}</h3>
+    <p class="muted" style="margin:10px 0 6px;font-size:.88rem">Tenés <strong>${fmt(cantMax,4)}</strong> unidades · Último: $ ${fmt(valUnit)} ARS${m?' · US$ '+fmt(valUnit/m)+' MEP':''}</p>
+    <div class="formgrid" style="margin-top:12px">
+      <div class="field"><label>Cantidad a vender</label><input type="number" id="v-cant" min="0" max="${cantMax}" step="any" value="${cantMax}" placeholder="cantidad"></div>
+      <div class="field"><label>Precio venta ARS</label><input type="number" id="v-precio" min="0" step="any" value="${valUnit||''}" placeholder="último si vacío"></div>
+      <div class="field"><label>Fecha</label><input type="date" id="v-fecha" value="${hoy()}"></div>
+    </div>
+    <div id="v-preview" style="margin-top:12px;font-size:.85rem"></div>
+    <div style="display:flex;gap:8px;margin-top:14px">
+      <button class="btn primary" id="v-confirm" style="flex:1">Confirmar venta</button>
+      <button class="btn" onclick="document.getElementById('v-cant').value=${cantMax};updVentaPreview('${t}',${cantMax})" style="flex:0 0 auto">Vender todo</button>
+    </div>`;
+  d.showModal();
+  const updPreview=()=>updVentaPreview(t,cantMax);
+  $('#v-cant').oninput=updPreview;
+  $('#v-precio').oninput=updPreview;
+  updPreview();
+  $('#v-confirm').onclick=()=>{
+    const cant=parseFloat($('#v-cant').value);
+    let precio=parseFloat($('#v-precio').value); if(!precio) precio=pr;
+    const fecha=$('#v-fecha').value;
+    if(!cant||cant<=0){toast('Ingresá una cantidad');return;}
+    if(cant>cantMax+0.0001){toast('No podés vender más de lo que tenés');return;}
+    if(!precio||precio<=0){toast('Necesitás un precio de venta');return;}
+    /* registrar la venta */
+    const montoTotal=cant*precio;
+    const com=comision(montoTotal);
+    registrarOp('venta',t,cant,precio,fecha,'manual');
+    d.close();
+    toast(`Venta de ${fmt(cant,4)} ${t} · Bruto $ ${fmt(montoTotal,0)} · Comisión IOL $ ${fmt(com,0)}`);
+  };
+}
+function updVentaPreview(t,cantMax){
+  const cant=parseFloat($('#v-cant').value)||0;
+  const precio=parseFloat($('#v-precio').value)||px(t)||0;
+  const m=mep();
+  const pos=posiciones()[t];
+  const ppc=pos?pos.costo/pos.cant:0;
+  const bruto=cant*precio;
+  const com=comision(bruto);
+  const neto=bruto-com;
+  const ganancia=cant*(precio-ppc);
+  const resto=cantMax-cant;
+  const prev=$('#v-preview');
+  if(!prev) return;
+  prev.innerHTML=cant>0&&precio>0?`
+    <div class="card" style="padding:12px">
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;font-size:.82rem">
+        <div><span class="k-lbl">Bruto</span><div class="mono">$ ${fmt(bruto,0)}</div></div>
+        <div><span class="k-lbl">Comisión IOL (0,726%)</span><div class="mono down">- $ ${fmt(com,0)}</div></div>
+        <div><span class="k-lbl">Neto</span><div class="mono">$ ${fmt(neto,0)}${m?' · US$ '+fmt(neto/m):''}</div></div>
+        <div><span class="k-lbl">P/L de la venta</span><div class="mono ${ganancia>=0?'up':'down'}">$ ${fmt(ganancia,0)} (${ppc>0?fmt(ganancia/(cant*ppc)*100)+'%':'—'})</div></div>
+        <div><span class="k-lbl">Quedan</span><div class="mono">${fmt(resto,4)} un.</div></div>
+        <div><span class="k-lbl">PPC original</span><div class="mono">$ ${fmt(ppc)}</div></div>
+      </div>
+    </div>`:'';}
+
 
 /* ============================ TEST DE PERFIL ============================ */
 const QUIZ=[
@@ -949,7 +1041,8 @@ document.addEventListener('DOMContentLoaded',()=>{
   };
   ['op-activo','op-cant','op-precio','op-tipo'].forEach(id=>$('#'+id).oninput=$('#'+id).onchange=()=>{
     const t=$('#op-activo').value, c=parseFloat($('#op-cant').value)||0, pr=parseFloat($('#op-precio').value)||px(t)||0;
-    $('#op-preview').textContent=c&&pr?`Total: $ ${fmt(c*pr,0)} ARS${mep()?' · US$ '+fmt(c*pr/mep()):''} · precio ${$('#op-precio').value?'manual':'último de mercado'}`:'';
+    const total=c*pr, cm=comision(total);
+    $('#op-preview').textContent=c&&pr?`Total: $ ${fmt(total,0)} ARS · Comisión IOL: $ ${fmt(cm,0)} (0,726%) · Neto: $ ${fmt(total+($('#op-tipo').value==='compra'?cm:-cm),0)}${mep()?' · US$ '+fmt(total/mep()):''}`:'';
   });
   $('#btn-plan').onclick=()=>{
     const monto=parseFloat($('#pl-monto').value);
