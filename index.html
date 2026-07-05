@@ -272,6 +272,10 @@ footer{border-top:1px solid var(--line);padding:20px 22px;color:var(--muted);fon
     <label class="btn" style="display:inline-block">⬆ Importar respaldo<input type="file" id="inp-import" accept=".json" style="display:none"></label>
     <button class="btn danger" id="btn-reset">Borrar todos los datos</button>
   </div>
+  <div class="controls" style="margin-top:14px">
+    <button class="btn" id="btn-forzar-subida">☁ Forzar subida a la nube (admin)</button>
+    <span class="muted mono" id="forzar-status" style="font-size:.75rem"></span>
+  </div>
 </section>
 
 </main>
@@ -1306,6 +1310,13 @@ document.addEventListener('DOMContentLoaded',()=>{
   $('#btn-export').onclick=exportar;
   $('#inp-import').onchange=e=>{ if(e.target.files[0]) importar(e.target.files[0]); };
   $('#btn-reset').onclick=()=>{ if(confirm('¿Borrar TODAS las operaciones, planes y perfil? No hay vuelta atrás sin respaldo.')){ localStorage.removeItem(KEY); S=load(); renderAll(); } };
+  $('#btn-forzar-subida').onclick=()=>{
+    if(!isAdmin){ toast('Solo rodocabral puede subir datos a la nube. Iniciá sesión primero.'); return; }
+    if(!confirm('Esto va a REEMPLAZAR lo que hay en la nube por los datos de ESTE dispositivo. ¿Confirmar?')) return;
+    pushToFirestore();
+    $('#forzar-status').textContent='Subiendo…';
+    setTimeout(()=>{ $('#forzar-status').textContent='Listo · '+new Date().toLocaleTimeString('es-AR').slice(0,5); },700);
+  };
   renderQuiz(); renderTape(); renderAll();
   fetchDolares().then(()=>{ fetchPrecios().then(()=>ejecutarPlanes()); });
 
@@ -1326,18 +1337,18 @@ document.addEventListener('DOMContentLoaded',()=>{
     isAdmin=!!(user&&user.email===ADMIN_EMAIL);
     if(user){
       syncUI('on',isAdmin?'Editando como '+user.email.split('@')[0]:'Sesión iniciada · solo lectura');
-      if(isAdmin&&S.lastModified){
-        /* si soy admin y tengo datos locales más nuevos, sincronizar */
+      /* admin: si tengo CUALQUIER dato local, lo empujo a la nube. Mi compu manda, siempre. */
+      if(isAdmin&&(S.ops.length||S.planes.length||S.perfil)){
         pushToFirestore();
       }
     }else{
       syncUI('on','Conectado · solo lectura');
     }
   });
-  /* escuchar cambios remotos en tiempo real (todos, sin login) */
+  /* escuchar cambios remotos en tiempo real */
   unsubSnap=onSnapshot(fbDoc,snap=>{
     if(!snap.exists()){
-      /* documento vacío: si soy admin, subir mis datos locales */
+      /* documento vacío en la nube: si soy admin y tengo datos locales, los subo */
       if(isAdmin&&(S.ops.length||S.planes.length)) pushToFirestore();
       return;
     }
@@ -1345,11 +1356,35 @@ document.addEventListener('DOMContentLoaded',()=>{
     let rd=null;
     try{ rd=JSON.parse(d.data); }catch(e){ return; }
     const rLM=d.lastModified||0;
-    const changed=mergeRemote(rd,rLM);
-    if(changed){
-      renderTape(); renderAll();
-      if(!isAdmin) syncUI('on','Actualizado · '+new Date().toLocaleTimeString('es-AR').slice(0,5));
+
+    if(isAdmin){
+      /* ADMIN: mi dispositivo manda. Nunca me pisan datos que ya tengo.
+         Excepción: si mi local está vacío (dispositivo nuevo/recién logueado sin datos),
+         adopto lo que haya en la nube UNA sola vez para no arrancar de cero. */
+      const localVacio=!S.ops.length&&!S.planes.length;
+      if(localVacio&&(rd.ops?.length||rd.planes?.length)){
+        remoteSyncing=true;
+        S=Object.assign({ops:[],planes:[],prices:{},vars:{},dolares:{},perfil:null,snapshots:[],lastModified:0},rd);
+        S.lastModified=rLM;
+        localStorage.setItem(KEY,JSON.stringify(S));
+        remoteSyncing=false;
+        renderTape(); renderAll();
+        toast('Se cargaron los datos existentes de la nube en este dispositivo');
+      }else if(rLM>(S.lastModified||0)+2000 && !localVacio){
+        /* la nube tiene algo más nuevo que no vino de este dispositivo: avisar, no pisar solo */
+        syncUI('err','Hay cambios más nuevos en la nube que acá. Revisá "Datos" antes de seguir cargando.');
+      }
+      return;
     }
+
+    /* NO ADMIN (Mateo, Agustín, o nadie logueado): siempre reflejar la nube */
+    remoteSyncing=true;
+    S=Object.assign({ops:[],planes:[],prices:{},vars:{},dolares:{},perfil:null,snapshots:[],lastModified:0},rd);
+    S.lastModified=rLM;
+    localStorage.setItem(KEY,JSON.stringify(S));
+    remoteSyncing=false;
+    renderTape(); renderAll();
+    syncUI('on','Actualizado · '+new Date().toLocaleTimeString('es-AR').slice(0,5));
   },err=>{
     console.warn('snapshot error',err);
     syncUI('err','Sin conexión con la nube');
