@@ -180,6 +180,7 @@ footer{border-top:1px solid var(--line);padding:20px 22px;color:var(--muted);fon
     <button data-t="Mateo">Mateo</button>
     <button data-t="Agustín">Agustín</button>
   </div>
+  <button class="btn" id="btn-informe" style="margin-left:10px;vertical-align:top">📋 Tu informe en criollo</button>
   <div class="grid kpis" id="kpis"></div>
   <div class="tblwrap"><table id="tbl-pos">
     <thead><tr><th>Activo</th><th class="num">Cantidad</th><th class="num">PPC</th><th class="num">Último</th><th class="num">Valor ARS</th><th class="num">Valor USD</th><th class="num">P/L ARS</th><th class="num">P/L %</th><th class="num">Mateo</th><th class="num">Agustín</th><th>Acciones</th></tr></thead>
@@ -263,7 +264,12 @@ footer{border-top:1px solid var(--line);padding:20px 22px;color:var(--muted);fon
 <!-- ================= PERFIL ================= -->
 <section class="tab" id="tab-perfil">
   <h2>Test de perfil del inversor</h2>
-  <p class="desc">15 preguntas pensadas para el inversor argentino: horizonte, tolerancia, conocimiento y situación. Al final te propone una cartera ideal por clase de activo, que después se compara contra tu cartera real.</p>
+  <p class="desc">15 preguntas para descubrir qué tipo de inversor sos. Cada uno hace el suyo — y si les da distinto, ¡mejor! Esa es la primera lección: no hay una única forma correcta de invertir, depende de cada persona.</p>
+  <div class="seg" id="seg-quiz">
+    <button data-q="Mateo" class="active" data-t="Mateo">Test de Mateo</button>
+    <button data-q="Agustín" data-t="Agustín">Test de Agustín</button>
+  </div>
+  <div id="perfil-resumen"></div>
   <div id="quiz"></div>
   <button class="btn primary" id="btn-quiz" style="margin-top:8px">Calcular mi perfil</button>
   <div id="perfil-out"></div>
@@ -804,6 +810,53 @@ async function fetchPrecios(){
   snapshot(); renderAll();
 }
 
+/* ============================ ¿SABÍAS QUE...? ============================ */
+const SABIAS={
+  cedear:[
+    'un CEDEAR puede subir en pesos aunque la acción original en EE.UU. no se haya movido: alcanza con que suba el dólar CCL. Jugás por dos lados a la vez.',
+    'cada CEDEAR tiene un "ratio": por ejemplo, si es 20:1, necesitás 20 CEDEARs para equivaler a 1 acción de verdad en EE.UU. Por eso hay CEDEARs "baratos" de empresas carísimas.',
+    'comprando un CEDEAR estás dolarizado sin comprar dólares: el precio en pesos sigue al dólar financiero automáticamente.',
+    'los CEDEARs de empresas que pagan dividendos te los acreditan en dólares en tu cuenta del bróker. Plata que llega sola por tener el papel.',
+    'el CEDEAR más operado de Argentina suele cambiar según la moda: hubo épocas de Apple, de Tesla, y de NVIDIA. Las modas pasan; las empresas buenas quedan.',
+    'diversificar entre sectores distintos reduce el riesgo total: es matemática, no opinión. Dos activos que no se mueven juntos se amortiguan entre sí.',
+    'podés comprar fracciones del mercado más grande del mundo desde Argentina con unos pocos miles de pesos. Hace 20 años esto era impensable para un minorista.'
+  ],
+  accion:[
+    'las acciones argentinas son de las más volátiles del mundo: pueden subir o bajar 10% en un día. Emoción garantizada, para bien y para mal.',
+    'el índice que agrupa las principales acciones argentinas se llama Merval, y existe desde 1986.',
+    'cuando comprás una acción sos dueño de un pedacito real de la empresa: si Galicia gana plata, una parte proporcional es tuya.',
+    'el precio de una acción argentina refleja dos cosas a la vez: cómo le va a la empresa y cómo está el humor del país. A veces la empresa va bien y el papel baja igual.'
+  ],
+  bono:[
+    'un bono es un préstamo al revés: vos le prestás plata al Estado y él te la devuelve en cuotas con interés. El riesgo es que Argentina ya dejó de pagar 9 veces en su historia.',
+    'el "riesgo país" que escuchás en las noticias se calcula justamente con estos bonos: mide cuánta desconfianza hay de que se paguen.',
+    'AL30 y GD30 prometen pagar lo mismo, pero el GD30 vale más: la diferencia es que uno se rige por ley argentina y el otro por ley de Nueva York. La confianza cotiza.',
+    'el famoso "dólar MEP" se fabrica con estos bonos: comprás el bono en pesos, lo vendés en dólares, y listo — dólares legales sin cepo.'
+  ],
+  letra:[
+    'una Lecap es como un plazo fijo del Estado, pero con una ventaja: podés venderla cualquier día sin esperar el vencimiento.',
+    'las letras que ajustan por CER siguen a la inflación: si los precios suben 5%, tu capital sube 5%. Es la forma clásica de no perder contra la inflación en pesos.',
+    'la "tasa fija" de una letra es una apuesta implícita: si la inflación termina siendo menor que la tasa, ganaste poder de compra real.'
+  ],
+  fci:[
+    'un FCI junta la plata de miles de personas y la invierte un equipo profesional. Vos comprás "cuotapartes" y tu plata sube o baja con el fondo.',
+    'los FCI money market (t+0) te pagan interés todos los días, incluso sábados y domingos, y podés sacar la plata en el momento.'
+  ],
+  cripto:[
+    'Bitcoin tiene un límite matemático de 21 millones de unidades: nunca va a haber más. Esa escasez programada es parte de su propuesta de valor.',
+    'la volatilidad de las cripto es extrema: caídas del 50% en un año son normales históricamente. Solo lo que estás dispuesto a ver caer a la mitad sin vender.'
+  ],
+  mm:[
+    'la plata "quieta" en pesos pierde contra la inflación todos los días. Un money market es el piso mínimo: que al menos gane algo mientras decidís qué hacer.'
+  ]
+};
+function sabiasQue(a){
+  const pool=[...(SABIAS[a.c]||[]),...(a.c!=='cedear'?[]:[])];
+  if(!pool.length) return '';
+  const dato=pool[Math.floor(Math.random()*pool.length)];
+  return `<div style="margin-top:12px;padding:10px 12px;background:rgba(233,180,76,.07);border:1px solid var(--gold-dim);border-radius:8px;font-size:.82rem;line-height:1.5"><strong style="color:var(--gold)">💡 ¿Sabías que…?</strong> ${dato}</div>`;
+}
+
 /* ============================ EXPLORAR ============================ */
 function renderExplorar(){
   const q=($('#buscador').value||'').toLowerCase(), fc=$('#filtro-clase').value;
@@ -866,6 +919,7 @@ function ficha(t){
     <span class="pill ${a.c}">${CLASES[a.c].n}</span>
     <h3 style="margin-top:8px">${a.t} · ${a.n}</h3>
     <p class="muted" style="margin:10px 0 14px;font-size:.9rem">${SECTOR[t]?`<strong style="color:var(--text)">Sector: ${SECTOR[t]}</strong><br>`:''}${a.d||descGenerica(a)}</p>
+    ${sabiasQue(a)}
     <div class="formgrid">
       <div class="field"><label>Último precio ARS</label><input type="number" id="f-precio" step="any" value="${px(t)??''}"></div>
       <div class="field"><button class="btn primary" style="width:100%" id="f-save">Guardar precio</button></div>
@@ -1053,13 +1107,21 @@ function renderPortfolio(){
     options:{plugins:{legend:{position:'bottom',labels:{color:'#8FA0BC',font:{family:'IBM Plex Mono',size:11}}}}}});
 
   /* actual vs ideal */
-  const ideal=S.perfil?CARTERAS[S.perfil.nivel]:null;
+  /* actual vs ideal: usa el perfil individual del mellizo filtrado, o el promedio de ambos */
+  let ideal=null, idealLbl='Ideal %';
+  const pM2=PERFILES['Mateo'], pA2=PERFILES['Agustín'];
+  if(filtroTit&&PERFILES[filtroTit]){ ideal=CARTERAS[PERFILES[filtroTit].nivel]; idealLbl='Ideal de '+filtroTit+' %'; }
+  else if(!filtroTit&&pM2&&pA2){
+    const cM=CARTERAS[pM2.nivel], cA=CARTERAS[pA2.nivel];
+    ideal={}; Object.keys(cM).forEach(k=>ideal[k]=(cM[k]+cA[k])/2); idealLbl='Ideal promedio de los dos %';
+  }
+  else if(!filtroTit&&(pM2||pA2)){ const p=pM2||pA2; ideal=CARTERAS[p.nivel]; idealLbl='Ideal ('+(pM2?'Mateo':'Agustín')+') %'; }
   const grupos=['mm','letra','bono','cedear','accion','cripto'];
   const totV=Object.values(porClase).reduce((a,b)=>a+b,0);
   const actualPct=grupos.map(g=>totV>0?((porClase[g]||0)+(g==='letra'?(porClase['fci']||0):0))/totV*100:0);
   chart('#ch-ideal',{type:'bar',data:{labels:['Liquidez','RF Pesos','Bonos USD','CEDEARs','Acciones','Cripto'],
     datasets:[{label:'Actual %',data:actualPct,backgroundColor:'#5BA8FF'},
-      ...(ideal?[{label:'Ideal %',data:grupos.map(g=>ideal[g]),backgroundColor:'#E9B44C'}]:[])]},
+      ...(ideal?[{label:idealLbl,data:grupos.map(g=>ideal[g]),backgroundColor:'#E9B44C'}]:[])]},
     options:{scales:{x:{ticks:{color:'#8FA0BC',font:{size:10}},grid:{color:'#1E2C45'}},y:{ticks:{color:'#8FA0BC'},grid:{color:'#1E2C45'}}},
       plugins:{legend:{labels:{color:'#8FA0BC',font:{family:'IBM Plex Mono',size:11}}}}}});
 
@@ -1285,27 +1347,57 @@ const DESCPERFIL=[
  'Mayoría en renta variable global vía CEDEARs, apuesta táctica a acciones argentinas y cripto con peso real. Tolerás caídas del 30% sin vender.',
  'Máxima exposición a crecimiento: tecnología, acciones locales apalancadas al ciclo y cripto. La volatilidad es tu socia, no tu enemiga.',
 ];
+/* Perfiles individuales: se guardan en ESTE dispositivo (educativo, no requiere permisos de nube) */
+const PERFKEY='mellis_perfiles_v1';
+let PERFILES=(()=>{ try{ return JSON.parse(localStorage.getItem(PERFKEY))||{}; }catch(e){ return {}; } })();
+function savePerfiles(){ localStorage.setItem(PERFKEY,JSON.stringify(PERFILES)); }
+let quizQuien='Mateo';
+const COLOR_TIT={'Mateo':'#5BA8FF','Agustín':'#33D17A'};
+
 function renderQuiz(){
+  /* resumen de resultados existentes + lección si difieren */
+  const pM=PERFILES['Mateo'], pA=PERFILES['Agustín'];
+  let resumen='';
+  if(pM||pA){
+    resumen='<div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:16px">';
+    [['Mateo',pM],['Agustín',pA]].forEach(([k,p])=>{
+      resumen+=p
+        ?`<div class="card" style="border-left:3px solid ${COLOR_TIT[k]}"><div class="k-lbl">${k}</div><div style="font-family:var(--f-display);font-weight:700;font-size:1.05rem;color:${COLOR_TIT[k]}">${NIVELES[p.nivel]}</div><div class="k-sub mono">${p.score}/45 · ${p.fecha}</div></div>`
+        :`<div class="card" style="opacity:.6"><div class="k-lbl">${k}</div><div class="muted" style="font-size:.85rem">Todavía no hizo el test</div></div>`;
+    });
+    resumen+='</div>';
+    if(pM&&pA){
+      resumen+=pM.nivel!==pA.nivel
+        ?`<div class="notice">💡 <strong>¡Les dio distinto!</strong> Mateo es <strong>${NIVELES[pM.nivel]}</strong> y Agustín <strong>${NIVELES[pA.nivel]}</strong>. Eso está perfecto: no existe una única forma "correcta" de invertir. Cada uno tiene su propia tolerancia al riesgo, y la mejor cartera es la que te deja dormir tranquilo a VOS.</div>`
+        :`<div class="notice">💡 A los dos les dio <strong>${NIVELES[pM.nivel]}</strong>. Igual ojo: el perfil puede cambiar con el tiempo — a medida que aprendan y pasen por subidas y bajadas del mercado, pueden rehacer el test cuando quieran.</div>`;
+    }
+  }
+  $('#perfil-resumen').innerHTML=resumen;
+  $('#btn-quiz').textContent='Calcular el perfil de '+quizQuien;
   $('#quiz').innerHTML=QUIZ.map((it,i)=>`<div class="q"><h3><span class="qnum">${String(i+1).padStart(2,'0')}</span>${it.q}</h3>
     <div class="opts">${it.o.map(([txt,v],j)=>`<label><input type="radio" name="q${i}" value="${v}"><span>${txt}</span></label>`).join('')}</div></div>`).join('');
   $('#quiz').querySelectorAll('input[type=radio]').forEach(r=>r.onchange=e=>{
     e.target.closest('.opts').querySelectorAll('label').forEach(l=>l.classList.remove('sel'));
     e.target.closest('label').classList.add('sel');
   });
-  if(S.perfil) mostrarPerfil();
+  if(PERFILES[quizQuien]) mostrarPerfil(quizQuien);
+  else $('#perfil-out').innerHTML='';
 }
 function calcularPerfil(){
   let score=0,resp=0;
   QUIZ.forEach((_,i)=>{ const r=document.querySelector(`input[name=q${i}]:checked`); if(r){score+=parseInt(r.value);resp++;} });
-  if(resp<QUIZ.length){toast(`Te faltan ${QUIZ.length-resp} respuestas`);return;}
+  if(resp<QUIZ.length){toast(`Te faltan ${QUIZ.length-resp} respuestas, ${quizQuien}`);return;}
   const max=45, pct=score/max;
   const nivel=pct<.22?0:pct<.42?1:pct<.62?2:pct<.82?3:4;
-  S.perfil={nivel,score,fecha:hoy()}; save(); mostrarPerfil(); renderPortfolio();
+  PERFILES[quizQuien]={nivel,score,fecha:hoy()}; savePerfiles();
+  renderQuiz(); mostrarPerfil(quizQuien); renderPortfolio();
+  toast('¡Listo '+quizQuien+'! Tu perfil es '+NIVELES[nivel]);
 }
-function mostrarPerfil(){
-  const p=S.perfil, c=CARTERAS[p.nivel];
-  $('#perfil-out').innerHTML=`<div class="perfil-result">
-    <h3>${NIVELES[p.nivel]}</h3>
+function mostrarPerfil(quien){
+  const p=PERFILES[quien]; if(!p){ $('#perfil-out').innerHTML=''; return; }
+  const c=CARTERAS[p.nivel];
+  $('#perfil-out').innerHTML=`<div class="perfil-result" style="border-color:${COLOR_TIT[quien]}">
+    <h3 style="color:${COLOR_TIT[quien]}">${quien}: ${NIVELES[p.nivel]}</h3>
     <p class="muted" style="margin-bottom:14px">${DESCPERFIL[p.nivel]} <span class="mono">(puntaje ${p.score}/45 · ${p.fecha})</span></p>
     <div class="tblwrap"><table><thead><tr><th>Clase</th><th class="num">% ideal</th><th>Con qué se arma en IOL</th></tr></thead><tbody>
       <tr><td>Liquidez remunerada</td><td class="num">${c.mm}%</td><td class="name">FCI money market t+0</td></tr>
@@ -1315,7 +1407,76 @@ function mostrarPerfil(){
       <tr><td>Acciones argentinas</td><td class="num">${c.accion}%</td><td class="name">GGAL, YPFD, PAMP…</td></tr>
       <tr><td>Cripto</td><td class="num">${c.cripto}%</td><td class="name">BTC/ETH (fuera de IOL) o ETF vía CEDEAR</td></tr>
     </tbody></table></div>
-    <p class="muted" style="margin-top:12px;font-size:.78rem">Orientación educativa según tus respuestas, no asesoramiento financiero. La comparación contra tu cartera real está en "Portfolio Total juntos".</p></div>`;
+    <p class="muted" style="margin-top:12px;font-size:.78rem">Orientación educativa según tus respuestas, no asesoramiento financiero. Tu resultado se guarda en este dispositivo. La comparación contra tu cartera real está en "Portfolio Total juntos" filtrando por tu nombre.</p></div>`;
+}
+
+/* ============================ INFORME EN CRIOLLO ============================ */
+function generarInforme(){
+  const quien=filtroTit||'los dos juntos';
+  const pos=vistaPos(), m=mep();
+  const entradas=Object.entries(pos).filter(([t])=>px(t));
+  if(!entradas.length){ toast('No hay posiciones para analizar'+(filtroTit?' de '+filtroTit:'')); return; }
+
+  /* métricas */
+  let totVal=0, totCosto=0;
+  const detalle=entradas.map(([t,p])=>{
+    const pr=px(t), val=p.cant*pr, plPct=(pr/(p.costo/p.cant)-1)*100, plArs=val-p.costo;
+    totVal+=val; totCosto+=p.costo;
+    return {t,val,plPct,plArs,sector:SECTOR[t]||'—'};
+  }).sort((a,b)=>b.plPct-a.plPct);
+  const mejor=detalle[0], peor=detalle[detalle.length-1];
+  const gananciaTotal=totVal-totCosto, gPct=totCosto>0?gananciaTotal/totCosto*100:0;
+  const sectores=[...new Set(detalle.map(d=>d.sector))];
+  const pesoMayor=detalle.reduce((a,b)=>a.val>b.val?a:b);
+  const concentracion=pesoMayor.val/totVal*100;
+
+  /* textos según situación */
+  const frGanancia=gananciaTotal>=0
+    ?`Vas ganando <strong class="up">$ ${fmt(gananciaTotal,0)}</strong> (un <strong class="up">${fmt(gPct,1)}%</strong> arriba de lo que pusiste). ${m?'En dólares MEP son unos <strong>US$ '+fmt(gananciaTotal/m,0)+'</strong>.':''} 👏`
+    :`Por ahora vas <strong class="down">$ ${fmt(Math.abs(gananciaTotal),0)}</strong> abajo (${fmt(gPct,1)}%). Tranqui: en inversiones lo normal es que haya meses buenos y malos. Lo importante es el largo plazo, no el susto del momento.`;
+
+  const frMejor=`Tu estrella es <strong>${mejor.t}</strong> (${mejor.sector}), que va <strong class="up">+${fmt(mejor.plPct,1)}%</strong>. ¿Por qué sube tanto un CEDEAR? Porque juega por dos lados a la vez: si la acción sube en EE.UU., ganás. Y si el dólar sube acá, también ganás. Cuando pasan las dos cosas juntas, el efecto se multiplica.`;
+
+  const frPeor=peor.plPct<0
+    ?`El que viene más flojo es <strong>${peor.t}</strong> (${peor.sector}), con <strong class="down">${fmt(peor.plPct,1)}%</strong>. No es motivo de pánico: ninguna cartera tiene todos los caballos ganadores al mismo tiempo. La pregunta correcta no es "¿bajó?", sino "¿la empresa sigue siendo buena?". Si sí, aguantar suele ser mejor que vender asustado.`
+    :`Y ojo con esto: hasta tu posición más floja (<strong>${peor.t}</strong>, +${fmt(peor.plPct,1)}%) está en verde. Cuando TODO sube, conviene recordar que no siempre va a ser así — no te acostumbres 😄.`;
+
+  const frDiversificacion=sectores.length>=4
+    ?`Están repartidos en <strong>${sectores.length} sectores distintos</strong> (${sectores.slice(0,4).join(', ')}${sectores.length>4?'…':''}). Eso se llama diversificar: si un sector tiene un mal año, los otros amortiguan el golpe.`
+    :`Tenés todo concentrado en <strong>${sectores.length} sector${sectores.length>1?'es':''}</strong> (${sectores.join(', ')}). Dato educativo: cuantos más sectores diferentes tengas, menos te duele cuando a uno le va mal. Es la regla de no poner todos los huevos en la misma canasta 🥚.`;
+
+  const frConcentracion=concentracion>35
+    ?`<strong>${pesoMayor.t}</strong> es el ${fmt(concentracion,0)}% de tu cartera. Cuando un solo papel pesa tanto, tu resultado depende demasiado de él — para bien y para mal.`
+    :`Ninguna posición domina demasiado la cartera (la mayor es ${pesoMayor.t} con ${fmt(concentracion,0)}%). Buen equilibrio.`;
+
+  const comInfo=calcComisiones(vistaOps());
+  const frComisiones=`Detalle que casi nadie mira: ya se pagaron <strong>$ ${fmt(comInfo.ars,0)}</strong> de comisiones al bróker. Cada compra y cada venta cuesta un 0,726% — por eso operar mil veces por mes es un negocio… para el bróker 😉.`;
+
+  /* perfil si existe */
+  let frPerfil='';
+  if(filtroTit&&PERFILES[filtroTit]){
+    const p=PERFILES[filtroTit];
+    frPerfil=`<p>Según tu test, sos <strong style="color:${COLOR_TIT[filtroTit]}">${NIVELES[p.nivel]}</strong>. Hoy tu cartera es 100% CEDEARs — para tu perfil, la teoría dice que también sumarían instrumentos más tranquilos (letras en pesos, money market) como colchón. No es obligación: es para que sepas que existe el menú completo.</p>`;
+  }else if(!filtroTit){
+    frPerfil=`<p>💡 Si todavía no lo hicieron, cada uno puede hacer su <strong>Test de perfil</strong> (pestaña arriba) para saber qué tipo de inversor es. Spoiler: puede darles distinto, y está perfecto que así sea.</p>`;
+  }
+
+  const fecha=new Date().toLocaleDateString('es-AR',{day:'numeric',month:'long',year:'numeric'});
+  const d=$('#ficha');
+  d.innerHTML=`<button class="close" onclick="this.closest('dialog').close()">×</button>
+    <h3 style="color:var(--gold)">📋 Informe de ${quien}</h3>
+    <p class="muted mono" style="font-size:.75rem;margin-bottom:12px">${fecha} · valuado al último precio${m?' · MEP $ '+fmt(m,0):''}</p>
+    <div style="font-size:.9rem;line-height:1.65;display:flex;flex-direction:column;gap:10px">
+      <p>Hoy ${filtroTit?'tenés':'tienen'} <strong>$ ${fmt(totVal,0)}</strong>${m?' (≈ <strong>US$ '+fmt(totVal/m,0)+'</strong> al MEP)':''} repartidos en ${entradas.length} activos.</p>
+      <p>${frGanancia}</p>
+      <p>${frMejor}</p>
+      <p>${frPeor}</p>
+      <p>${frDiversificacion} ${frConcentracion}</p>
+      <p>${frComisiones}</p>
+      ${frPerfil}
+    </div>
+    <p class="muted" style="margin-top:14px;font-size:.72rem">Informe educativo generado con los datos de la app. No es recomendación de compra ni de venta.</p>`;
+  d.showModal();
 }
 
 /* ============================ DATOS ============================ */
@@ -1344,6 +1505,10 @@ document.addEventListener('DOMContentLoaded',()=>{
     $('#seg-tit').querySelectorAll('button').forEach(x=>x.classList.remove('active'));
     b.classList.add('active'); filtroTit=b.dataset.t; renderPortfolio();
   });
+  $('#seg-quiz').querySelectorAll('button').forEach(b=>b.onclick=()=>{
+    $('#seg-quiz').querySelectorAll('button').forEach(x=>x.classList.remove('active'));
+    b.classList.add('active'); quizQuien=b.dataset.q; renderQuiz();
+  });
   $('#op-fecha').value=hoy(); $('#pl-inicio').value=hoy();
   $('#buscador').oninput=renderExplorar; $('#filtro-clase').onchange=renderExplorar;
   $('#btn-precios').onclick=fetchPrecios;
@@ -1366,6 +1531,7 @@ document.addEventListener('DOMContentLoaded',()=>{
     save(); ejecutarPlanes(); renderAll(); toast('Plan creado');
   };
   $('#btn-quiz').onclick=calcularPerfil;
+  $('#btn-informe').onclick=generarInforme;
   $('#btn-export').onclick=exportar;
   $('#inp-import').onchange=e=>{ if(e.target.files[0]) importar(e.target.files[0]); };
   $('#btn-reset').onclick=()=>{ if(confirm('¿Borrar TODAS las operaciones, planes y perfil? No hay vuelta atrás sin respaldo.')){ localStorage.removeItem(KEY); S=load(); renderAll(); } };
