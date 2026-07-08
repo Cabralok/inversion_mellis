@@ -1583,21 +1583,20 @@ document.addEventListener('DOMContentLoaded',()=>{
     const rLM=d.lastModified||0;
 
     if(isAdmin){
-      /* ADMIN: mi dispositivo manda. Nunca me pisan datos que ya tengo.
-         Excepción: si mi local está vacío (dispositivo nuevo/recién logueado sin datos),
-         adopto lo que haya en la nube UNA sola vez para no arrancar de cero. */
+      /* ADMIN: solo yo escribo, así que cualquier dato MÁS NUEVO en la nube
+         vino de otro dispositivo mío (PC oficina, celu, etc.) → lo adopto.
+         Protección que se mantiene: una nube VACÍA jamás pisa datos locales. */
       const localVacio=!S.ops.length&&!S.planes.length;
-      if(localVacio&&(rd.ops?.length||rd.planes?.length)){
+      const remoteVacio=!(rd.ops?.length||rd.planes?.length);
+      if(remoteVacio&&!localVacio){ pushToFirestore(); return; }
+      if(rLM>(S.lastModified||0)){
         remoteSyncing=true;
         S=Object.assign({ops:[],planes:[],prices:{},vars:{},dolares:{},perfil:null,snapshots:[],lastModified:0},rd);
         S.lastModified=rLM;
         localStorage.setItem(KEY,JSON.stringify(S));
         remoteSyncing=false;
         renderTape(); renderAll();
-        toast('Se cargaron los datos existentes de la nube en este dispositivo');
-      }else if(rLM>(S.lastModified||0)+2000 && !localVacio){
-        /* la nube tiene algo más nuevo que no vino de este dispositivo: avisar, no pisar solo */
-        syncUI('err','Hay cambios más nuevos en la nube que acá. Revisá "Datos" antes de seguir cargando.');
+        syncUI('on','Actualizado desde otro dispositivo tuyo · '+new Date().toLocaleTimeString('es-AR').slice(0,5));
       }
       return;
     }
