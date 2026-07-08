@@ -298,7 +298,7 @@ footer{border-top:1px solid var(--line);padding:20px 22px;color:var(--muted);fon
 <div class="toast" id="toast"></div>
 
 <footer>
-  <strong>Aviso:</strong> herramienta educativa y de seguimiento. No ejecuta órdenes reales, no se conecta a tu cuenta de IOL y nada de lo que muestra constituye recomendación de inversión. Precios de fuentes públicas de terceros, pueden tener demora. Las comisiones se estiman al 0,726% (0,6% + IVA 21%), tarifa de IOL para CEDEARs; otros instrumentos pueden variar. Construido con Claude.
+  <strong>Aviso:</strong> herramienta educativa y de seguimiento. No ejecuta órdenes reales, no se conecta a tu cuenta de IOL y nada de lo que muestra constituye recomendación de inversión. Precios de fuentes públicas de terceros, pueden tener demora. Las comisiones se estiman al 0,6897% (comisión 0,50% + derechos de mercado 0,07%, ambos + IVA), calibrado contra boletos reales de IOL para CEDEARs; otros instrumentos pueden variar. Construido con Claude.
 </footer>
 
 <script type="module">
@@ -1205,9 +1205,12 @@ function modalReparto(t){
 }
 
 /* ============================ COMISIONES IOL ============================ */
-const COMISION_IOL=0.006; /* 0.6% */
+/* Calibrado contra talón real del 7/7/2026 (op. 180480994):
+   comisión 0,50% + derechos de mercado 0,07%, ambos + IVA 21% = 0,6897% total */
+const COMISION_IOL=0.005;   /* 0,50% comisión IOL */
+const DERECHOS_MERCADO=0.0007; /* 0,07% BYMA */
 const IVA=0.21;
-const COM_TOTAL=COMISION_IOL*(1+IVA); /* 0.726% */
+const COM_TOTAL=(COMISION_IOL+DERECHOS_MERCADO)*(1+IVA); /* 0,6897% */
 function comision(monto){ return monto*COM_TOTAL; }
 function calcComisiones(ops){
   let ars=0;
@@ -1305,7 +1308,7 @@ function updVentaPreview(t,cantMax){
     <div class="card" style="padding:12px">
       <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;font-size:.82rem">
         <div><span class="k-lbl">Bruto</span><div class="mono">$ ${fmt(bruto,0)}</div></div>
-        <div><span class="k-lbl">Comisión IOL (0,726%)</span><div class="mono down">- $ ${fmt(com,0)}</div></div>
+        <div><span class="k-lbl">Comisión + derechos (0,69%)</span><div class="mono down">- $ ${fmt(com,0)}</div></div>
         <div><span class="k-lbl">Neto</span><div class="mono">$ ${fmt(neto,0)}${m?' · US$ '+fmt(neto/m):''}</div></div>
         <div><span class="k-lbl">P/L de la venta</span><div class="mono ${ganancia>=0?'up':'down'}">$ ${fmt(ganancia,0)} (${ppc>0?fmt(ganancia/(cant*ppc)*100)+'%':'—'})</div></div>
         <div><span class="k-lbl">Quedan</span><div class="mono">${fmt(resto,4)} un.</div></div>
@@ -1450,7 +1453,7 @@ function generarInforme(){
     :`Ninguna posición domina demasiado la cartera (la mayor es ${pesoMayor.t} con ${fmt(concentracion,0)}%). Buen equilibrio.`;
 
   const comInfo=calcComisiones(vistaOps());
-  const frComisiones=`Detalle que casi nadie mira: ya se pagaron <strong>$ ${fmt(comInfo.ars,0)}</strong> de comisiones al bróker. Cada compra y cada venta cuesta un 0,726% — por eso operar mil veces por mes es un negocio… para el bróker 😉.`;
+  const frComisiones=`Detalle que casi nadie mira: ya se pagaron <strong>$ ${fmt(comInfo.ars,0)}</strong> de comisiones al bróker. Cada compra y cada venta cuesta un 0,69% entre comisión y derechos de mercado — por eso operar mil veces por mes es un negocio… para el bróker 😉.`;
 
   /* perfil si existe */
   let frPerfil='';
@@ -1521,7 +1524,7 @@ document.addEventListener('DOMContentLoaded',()=>{
   ['op-activo','op-cant','op-precio','op-tipo'].forEach(id=>$('#'+id).oninput=$('#'+id).onchange=()=>{
     const t=$('#op-activo').value, c=parseFloat($('#op-cant').value)||0, pr=parseFloat($('#op-precio').value)||px(t)||0;
     const total=c*pr, cm=comision(total);
-    $('#op-preview').textContent=c&&pr?`Total: $ ${fmt(total,0)} ARS · Comisión IOL: $ ${fmt(cm,0)} (0,726%) · Neto: $ ${fmt(total+($('#op-tipo').value==='compra'?cm:-cm),0)}${mep()?' · US$ '+fmt(total/mep()):''}`:'';
+    $('#op-preview').textContent=c&&pr?`Total: $ ${fmt(total,0)} ARS · Comisión + derechos: $ ${fmt(cm,0)} (0,69%) · Neto: $ ${fmt(total+($('#op-tipo').value==='compra'?cm:-cm),0)}${mep()?' · US$ '+fmt(total/mep()):''}`:'';
   });
   $('#btn-plan').onclick=()=>{
     if(!requireAdmin()) return;
